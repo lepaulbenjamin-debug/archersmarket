@@ -27,21 +27,21 @@ export function LogoMark({
   return (
     <Svg width={size} height={size} viewBox="0 0 200 200">
       {/* Flèches croisées, derrière le bouclier */}
-      <G stroke={metal} strokeWidth={6} strokeLinecap="round">
+      <G stroke={metal} strokeWidth={5} strokeLinecap="round">
         <Path d="M40 40 L160 160" />
         <Path d="M160 40 L40 160" />
       </G>
       <G fill={metal}>
         {/* Pointes */}
-        <Path d="M24 24 L52 33 L33 52 Z" />
-        <Path d="M176 24 L167 52 L148 33 Z" />
-        <Path d="M24 176 L33 148 L52 167 Z" />
-        <Path d="M176 176 L148 167 L167 148 Z" />
+        <Path d="M22 22 L52 31 L31 52 Z" />
+        <Path d="M178 22 L169 52 L148 31 Z" />
+        <Path d="M22 178 L31 148 L52 169 Z" />
+        <Path d="M178 178 L148 169 L169 148 Z" />
         {/* Empennages */}
-        <Path d="M44 62 L62 44 L70 52 L52 70 Z" />
-        <Path d="M156 62 L138 44 L130 52 L148 70 Z" />
-        <Path d="M44 138 L62 156 L70 148 L52 130 Z" />
-        <Path d="M156 138 L138 156 L130 148 L148 130 Z" />
+        <Path d="M45 61 L61 45 L69 53 L53 69 Z" />
+        <Path d="M155 61 L139 45 L131 53 L147 69 Z" />
+        <Path d="M45 139 L61 155 L69 147 L53 131 Z" />
+        <Path d="M155 139 L139 155 L131 147 L147 131 Z" />
       </G>
 
       {/* Bouclier */}
@@ -53,21 +53,23 @@ export function LogoMark({
         strokeLinejoin="round"
       />
 
-      {/* Ailes déployées */}
+      {/* Ailes déployées : trois plumes par côté */}
       <G fill={metal}>
-        <Path d="M6 86 L64 100 L12 102 Z" />
-        <Path d="M14 108 L64 110 L28 121 Z" />
-        <Path d="M194 86 L136 100 L188 102 Z" />
-        <Path d="M186 108 L136 110 L172 121 Z" />
+        <Path d="M68 90 L6 74 L16 90 L66 97 Z" />
+        <Path d="M68 98 L10 96 L26 106 L67 104 Z" />
+        <Path d="M72 120 L24 124 L46 130 L74 126 Z" />
+        <Path d="M132 90 L194 74 L184 90 L134 97 Z" />
+        <Path d="M132 98 L190 96 L174 106 L133 104 Z" />
+        <Path d="M128 120 L176 124 L154 130 L126 126 Z" />
       </G>
 
       {/* Poignée de main */}
       <G stroke={metal} strokeWidth={13} strokeLinecap="round">
-        <Path d="M66 116 L100 103" />
-        <Path d="M134 106 L100 119" />
+        <Path d="M74 116 L100 106" />
+        <Path d="M126 103 L100 113" />
       </G>
-      <Path d="M90 94 L110 101 L101 111 L86 103 Z" fill={metal} />
-      <Path d="M88 108 L116 108" stroke={fill} strokeWidth={3} strokeLinecap="round" />
+      <Path d="M90 96 L108 103 L100 111 L84 104 Z" fill={metal} />
+      <Path d="M88 109 L112 101" stroke={fill} strokeWidth={2.6} strokeLinecap="round" />
     </Svg>
   );
 }

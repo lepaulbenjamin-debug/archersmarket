@@ -2,7 +2,7 @@
   "expo": {
     "name": "Archers Market",
     "slug": "archersmarket",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "archersmarket",
@@ -15,10 +15,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.archersmarket.app"
+      "bundleIdentifier": "app.archersmarket.ios",
+      "buildNumber": "1"
     },
     "android": {
-      "package": "com.archersmarket.app",
+      "package": "app.archersmarket.android",
       "adaptiveIcon": {
         "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,7 +27,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro",

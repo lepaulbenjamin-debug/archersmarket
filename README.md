@@ -38,6 +38,28 @@ Compte de démonstration pré-rempli sur l'écran de connexion :
 - Conversation par annonce entre acheteur et vendeur, badge de non-lus.
 - Offres de prix attachées à un message.
 
+## Publication
+
+Cette version 2 remplace l'app publiée (un site embarqué en WebView). Elle reprend donc les
+fiches stores existantes :
+
+| | Identifiant | Statut |
+| --- | --- | --- |
+| iOS | `app.archersmarket.ios` (Apple ID `6448762227`) | confirmé |
+| Android | `app.archersmarket.android` | **à confirmer** dans la Play Console |
+
+L'ancienne version publiée est la 1.1.3 ; `app.json` est donc en 2.0.0.
+
+## Base de données
+
+`supabase/migrations/0001_init.sql` contient le schéma cible : profils, annonces et leurs photos,
+favoris, conversations et messages, avec la sécurité au niveau ligne (RLS) et le bucket Storage
+des photos. Il s'applique tel quel sur un projet Supabase neuf
+(`supabase db push`, ou copier-coller dans l'éditeur SQL).
+
+Tant qu'aucun backend n'est configuré, l'app fonctionne sur son jeu de démonstration local
+(voir ci-dessous).
+
 ## Architecture
 
 ```

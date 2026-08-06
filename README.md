@@ -65,7 +65,13 @@ backend (Supabase, API REST…) revient à réimplémenter `src/services/` sans 
 
 ### Identité visuelle
 
-L'emblème (bouclier, flèches croisées, ailes, poignée de main) est redessiné en vectoriel dans
-`src/components/Logo.tsx` ; les icônes d'application et le splash en sont dérivés
-(`assets/icon.png`, `assets/splash-icon.png`, `assets/android-icon-*.png`).
-Pour repasser au fichier officiel, remplacer ces PNG et ajuster `LogoMark` si besoin.
+`assets/icon.png` est le logo officiel et sert de source unique. Toutes les déclinaisons en sont
+dérivées par le script `scripts/derive-brand-assets.js` :
+
+- `assets/brand/emblem-dark.png` — emblème détouré, métal blanc (fonds sombres) ;
+- `assets/brand/emblem-light.png` — métal gris (fonds clairs), utilisé par `LogoMark` dans l'app ;
+- `assets/splash-icon.png`, `assets/android-icon-foreground.png`,
+  `assets/android-icon-monochrome.png`, `assets/android-icon-background.png`, `assets/favicon.png`.
+
+Après avoir remplacé `assets/icon.png`, relancer `node scripts/derive-brand-assets.js` pour
+regénérer l'ensemble.

@@ -1,4 +1,6 @@
-import { db, delay, makeId } from '@/services/db';
+import { LISTING_SELECT, toListing, type ListingRow } from '@/services/mappers';
+import { uploadListingPhoto } from '@/services/photos';
+import { fail, supabase } from '@/services/supabase';
 import type { Listing, ListingFilters, ListingStatus, NewListingInput } from '@/types';
 
 const matchesQuery = (listing: Listing, query: string) => {
@@ -12,6 +14,10 @@ const matchesQuery = (listing: Listing, query: string) => {
     .every((token) => haystack.includes(token));
 };
 
+/**
+ * Filtrage et tri côté client : le fil est chargé en une fois, ce qui rend les
+ * filtres instantanés. À fort volume, basculer ces critères dans la requête.
+ */
 export function applyFilters(listings: Listing[], filters: ListingFilters): Listing[] {
   const {
     query,
@@ -28,7 +34,7 @@ export function applyFilters(listings: Listing[], filters: ListingFilters): List
   } = filters;
 
   const result = listings.filter((listing) => {
-    if (listing.status === 'sold') return false;
+    if (listing.status === 'sold' || listing.status === 'draft') return false;
     if (query && !matchesQuery(listing, query)) return false;
     if (categories?.length && !categories.includes(listing.category)) return false;
     if (conditions?.length && !conditions.includes(listing.condition)) return false;
@@ -62,47 +68,81 @@ export function applyFilters(listings: Listing[], filters: ListingFilters): List
 }
 
 export async function fetchListings(): Promise<Listing[]> {
-  await delay();
-  const listings = await db.listings();
-  return [...listings].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const { data, error } = await supabase
+    .from('listings')
+    .select(LISTING_SELECT)
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (error) fail(error, 'Chargement des annonces impossible.');
+  return (data as ListingRow[]).map(toListing);
 }
 
-export async function createListing(input: NewListingInput, sellerId: string): Promise<Listing> {
-  await delay(260);
-  const listings = await db.listings();
-  const listing: Listing = {
-    ...input,
-    id: makeId('l'),
-    sellerId,
-    images: input.images?.length ? input.images : [input.category],
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    views: 0,
-  };
-  await db.saveListings([listing, ...listings]);
-  return listing;
+export async function createListing(
+  input: NewListingInput,
+  sellerId: string,
+): Promise<Listing> {
+  const { photos = [], ...fields } = input;
+
+  const { data, error } = await supabase
+    .from('listings')
+    .insert({
+      seller_id: sellerId,
+      title: fields.title,
+      description: fields.description,
+      price: fields.price,
+      category: fields.category,
+      brand: fields.brand,
+      condition: fields.condition,
+      hand: fields.handedness,
+      draw_weight: fields.drawWeight ?? null,
+      bow_length: fields.bowLength ?? null,
+      draw_length: fields.drawLength ?? null,
+      spine: fields.spine ?? null,
+      size: fields.size ?? null,
+      city: fields.city,
+      shipping: fields.shipping,
+      shipping_price: fields.shippingPrice ?? null,
+    })
+    .select(LISTING_SELECT)
+    .single();
+  if (error || !data) fail(error, 'Publication de l’annonce impossible.');
+
+  const listing = data as ListingRow;
+
+  if (photos.length) {
+    const paths = await Promise.all(
+      photos.map((uri, index) => uploadListingPhoto(uri, sellerId, listing.id, index)),
+    );
+    const { error: imagesError } = await supabase.from('listing_images').insert(
+      paths.map((path, position) => ({ listing_id: listing.id, path, position })),
+    );
+    if (imagesError) fail(imagesError, 'Enregistrement des photos impossible.');
+    listing.listing_images = paths.map((path, position) => ({ path, position }));
+  }
+
+  return toListing(listing);
 }
 
 export async function updateListingStatus(
   listingId: string,
   status: ListingStatus,
-): Promise<Listing[]> {
-  const listings = await db.listings();
-  const next = listings.map((l) => (l.id === listingId ? { ...l, status } : l));
-  await db.saveListings(next);
-  return next;
+): Promise<Listing> {
+  const { data, error } = await supabase
+    .from('listings')
+    .update({ status })
+    .eq('id', listingId)
+    .select(LISTING_SELECT)
+    .single();
+  if (error || !data) fail(error, 'Mise à jour de l’annonce impossible.');
+  return toListing(data as ListingRow);
 }
 
-export async function deleteListing(listingId: string): Promise<Listing[]> {
-  const listings = await db.listings();
-  const next = listings.filter((l) => l.id !== listingId);
-  await db.saveListings(next);
-  return next;
+export async function deleteListing(listingId: string): Promise<void> {
+  const { error } = await supabase.from('listings').delete().eq('id', listingId);
+  if (error) fail(error, 'Suppression de l’annonce impossible.');
 }
 
 export async function incrementViews(listingId: string): Promise<void> {
-  const listings = await db.listings();
-  await db.saveListings(
-    listings.map((l) => (l.id === listingId ? { ...l, views: l.views + 1 } : l)),
-  );
+  // Fonction SECURITY DEFINER : incrémente sans ouvrir l'annonce en écriture.
+  await supabase.rpc('increment_listing_views', { target: listingId });
 }

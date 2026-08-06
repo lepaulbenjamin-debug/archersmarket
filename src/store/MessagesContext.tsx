@@ -30,35 +30,69 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const data = await messagesService.fetchThreads();
+  const reload = useCallback(async () => {
+    if (!user) {
+      setConversations([]);
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+    try {
+      const data = await messagesService.fetchThreads(user.id);
       setConversations(data.conversations);
       setMessages(data.messages);
+    } finally {
       setLoading(false);
-    })();
-  }, []);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    setLoading(true);
+    reload();
+  }, [reload]);
+
+  // Temps réel : un message reçu apparaît sans rafraîchir.
+  useEffect(() => {
+    if (!user) return;
+    return messagesService.subscribeToMessages((message) => {
+      setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
+      setConversations((prev) => {
+        const known = prev.some((c) => c.id === message.conversationId);
+        if (!known) {
+          // Première conversation ouverte par un acheteur : on recharge.
+          reload();
+          return prev;
+        }
+        return prev.map((c) =>
+          c.id === message.conversationId ? { ...c, updatedAt: message.createdAt } : c,
+        );
+      });
+    });
+  }, [reload, user]);
 
   const threads = useMemo<Thread[]>(() => {
     if (!user) return [];
     return conversations
-      .filter((c) => c.buyerId === user.id || c.sellerId === user.id)
       .map((conversation) => {
         const threadMessages = messages
           .filter((m) => m.conversationId === conversation.id)
           .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+        const lastMessage = threadMessages[threadMessages.length - 1];
+        const unread =
+          !!lastMessage &&
+          lastMessage.senderId !== user.id &&
+          (!conversation.readAt || Date.parse(conversation.readAt) < Date.parse(lastMessage.createdAt));
         return {
           conversation,
           messages: threadMessages,
-          lastMessage: threadMessages[threadMessages.length - 1],
-          unread: !conversation.readBy.includes(user.id),
-          otherUserId: conversation.buyerId === user.id ? conversation.sellerId : conversation.buyerId,
+          lastMessage,
+          unread,
+          otherUserId:
+            conversation.buyerId === user.id ? conversation.sellerId : conversation.buyerId,
         };
       })
       .sort(
-        (a, b) =>
-          Date.parse(b.conversation.updatedAt) - Date.parse(a.conversation.updatedAt),
+        (a, b) => Date.parse(b.conversation.updatedAt) - Date.parse(a.conversation.updatedAt),
       );
   }, [conversations, messages, user]);
 
@@ -84,9 +118,15 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const sendMessage = useCallback(
     async (conversationId: string, text: string, offer?: number) => {
       if (!user || !text.trim()) return;
-      const data = await messagesService.sendMessage(conversationId, user.id, text, offer);
-      setConversations(data.conversations);
-      setMessages(data.messages);
+      const message = await messagesService.sendMessage(conversationId, user.id, text, offer);
+      setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === conversationId
+            ? { ...c, updatedAt: message.createdAt, readAt: message.createdAt }
+            : c,
+        ),
+      );
     },
     [user],
   );
@@ -94,7 +134,10 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const markAsRead = useCallback(
     async (conversationId: string) => {
       if (!user) return;
-      setConversations(await messagesService.markAsRead(conversationId, user.id));
+      const readAt = await messagesService.markAsRead(conversationId, user.id);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, readAt } : c)),
+      );
     },
     [user],
   );

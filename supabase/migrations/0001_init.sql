@@ -297,3 +297,10 @@ create policy listing_photos_delete on storage.objects for delete
   using (
     bucket_id = 'listing-photos' and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ---------------------------------------------------------------------------
+-- Temps réel (messagerie)
+-- ---------------------------------------------------------------------------
+
+alter publication supabase_realtime add table messages;
+alter publication supabase_realtime add table conversations;

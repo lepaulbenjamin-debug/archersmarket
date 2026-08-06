@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
@@ -20,7 +20,7 @@ export default function BrowseScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ category?: string; q?: string }>();
   const { user } = useAuth();
-  const { search, isFavorite, toggleFavorite, loading } = useListings();
+  const { search, isFavorite, toggleFavorite, loading, error, refresh } = useListings();
 
   const [query, setQuery] = useState(params.q ?? '');
   const [filters, setFilters] = useState<ListingFilters>({ sort: 'recent' });
@@ -131,12 +131,30 @@ export default function BrowseScreen() {
         </Text>
       </View>
 
+      {error ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={refresh}
+          style={({ pressed }) => [styles.errorBanner, pressed && styles.pressed]}
+        >
+          <MaterialCommunityIcons name="cloud-off-outline" size={18} color={colors.danger} />
+          <View style={styles.errorText}>
+            <Text style={styles.errorTitle}>Connexion au serveur impossible</Text>
+            <Text style={styles.errorDetail} numberOfLines={3}>
+              {error} — toucher pour réessayer.
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
+
+      {loading ? <ActivityIndicator style={styles.loader} color={colors.primary} /> : null}
+
       <ListingGrid
         listings={results}
         isFavorite={isFavorite}
         onToggleFavorite={handleFavorite}
         empty={
-          loading ? undefined : (
+          loading || error ? undefined : (
             <EmptyState
               icon="bullseye-arrow"
               title="Aucune annonce ne correspond"
@@ -233,5 +251,19 @@ const styles = StyleSheet.create({
   },
   sortLabel: { fontSize: 13, fontWeight: '600', color: colors.text },
   resultsCount: { fontSize: 13, fontWeight: '600', color: colors.textFaint },
+  loader: { marginTop: spacing.xl },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerSoft,
+  },
+  errorText: { flex: 1 },
+  errorTitle: { fontSize: 13.5, fontWeight: '700', color: colors.danger },
+  errorDetail: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   pressed: { opacity: 0.85 },
 });

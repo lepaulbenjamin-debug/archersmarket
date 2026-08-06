@@ -1,8 +1,6 @@
-import { db, delay, makeId } from '@/services/db';
-import { keys, readJSON, removeKey, writeJSON } from '@/services/storage';
+import { toUser, type ProfileRow } from '@/services/mappers';
+import { fail, supabase } from '@/services/supabase';
 import type { User } from '@/types';
-
-const AVATAR_COLORS = ['#1B1B1D', '#F5843C', '#58585A', '#3E5C76', '#8A5A44', '#4A4A4E'];
 
 export interface Credentials {
   email: string;
@@ -15,77 +13,116 @@ export interface SignUpInput extends Credentials {
   club?: string;
 }
 
-const normalize = (email: string) => email.trim().toLowerCase();
+const PROFILE_SELECT =
+  'id, handle, name, city, club, bio, discipline, avatar_color, rating, review_count, created_at';
 
-/** Retire le mot de passe avant de faire circuler l'utilisateur dans l'app. */
-const publicUser = (user: User): User => {
-  const { password: _password, ...rest } = user;
-  return rest;
-};
+const handleFrom = (name: string) =>
+  name.trim().toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '_').slice(0, 18) || 'archer';
+
+async function profileOf(userId: string, email?: string): Promise<User> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(PROFILE_SELECT)
+    .eq('id', userId)
+    .single();
+  if (error || !data) fail(error, 'Profil introuvable.');
+  return toUser(data as ProfileRow, email);
+}
 
 export async function restoreSession(): Promise<User | null> {
-  const userId = await readJSON<string | null>(keys.session, null);
-  if (!userId) return null;
-  const users = await db.users();
-  const found = users.find((u) => u.id === userId);
-  return found ? publicUser(found) : null;
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
+  if (!session) return null;
+  try {
+    return await profileOf(session.user.id, session.user.email ?? undefined);
+  } catch {
+    // Session valide mais profil absent (compte supprimé côté base).
+    await supabase.auth.signOut();
+    return null;
+  }
 }
 
 export async function signIn({ email, password }: Credentials): Promise<User> {
-  await delay();
-  const users = await db.users();
-  const user = users.find((u) => normalize(u.email) === normalize(email));
-  if (!user) throw new Error('Aucun compte ne correspond à cette adresse e-mail.');
-  if (user.password !== password) throw new Error('Mot de passe incorrect.');
-  await writeJSON(keys.session, user.id);
-  return publicUser(user);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+  if (error) {
+    throw new Error(
+      error.message === 'Invalid login credentials'
+        ? 'Adresse e-mail ou mot de passe incorrect.'
+        : error.message,
+    );
+  }
+  return profileOf(data.user.id, data.user.email ?? undefined);
 }
 
 export async function signUp(input: SignUpInput): Promise<User> {
-  await delay();
-  const users = await db.users();
-  if (users.some((u) => normalize(u.email) === normalize(input.email))) {
-    throw new Error('Un compte existe déjà avec cette adresse e-mail.');
-  }
-  const user: User = {
-    id: makeId('u'),
-    name: input.name.trim(),
-    handle: input.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 18) || 'archer',
-    email: normalize(input.email),
+  const { data, error } = await supabase.auth.signUp({
+    email: input.email.trim(),
     password: input.password,
-    city: input.city.trim(),
-    club: input.club?.trim() || undefined,
-    avatarColor: AVATAR_COLORS[users.length % AVATAR_COLORS.length],
-    rating: 0,
-    reviewCount: 0,
-    memberSince: new Date().toISOString().slice(0, 10),
-  };
-  await db.saveUsers([...users, user]);
-  await writeJSON(keys.session, user.id);
-  return publicUser(user);
+    options: {
+      // Reprises par le trigger handle_new_user pour créer le profil.
+      data: {
+        name: input.name.trim(),
+        handle: handleFrom(input.name),
+        city: input.city.trim(),
+        club: input.club?.trim() ?? '',
+      },
+    },
+  });
+  if (error) {
+    throw new Error(
+      error.message.includes('already registered')
+        ? 'Un compte existe déjà avec cette adresse e-mail.'
+        : error.message,
+    );
+  }
+  if (!data.session) {
+    throw new Error(
+      'Compte créé. Confirmez votre adresse e-mail via le lien reçu, puis connectez-vous.',
+    );
+  }
+  return profileOf(data.user!.id, data.user!.email ?? undefined);
 }
 
 export async function signOut(): Promise<void> {
-  await removeKey(keys.session);
+  await supabase.auth.signOut();
 }
 
 export async function updateProfile(userId: string, patch: Partial<User>): Promise<User> {
-  await delay(120);
-  const users = await db.users();
-  const next = users.map((u) => (u.id === userId ? { ...u, ...patch, id: u.id } : u));
-  await db.saveUsers(next);
-  const updated = next.find((u) => u.id === userId);
-  if (!updated) throw new Error('Utilisateur introuvable.');
-  return publicUser(updated);
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      name: patch.name,
+      city: patch.city,
+      club: patch.club ?? null,
+      bio: patch.bio ?? null,
+      discipline: patch.discipline ?? null,
+    })
+    .eq('id', userId);
+  if (error) fail(error, 'Mise à jour du profil impossible.');
+  return profileOf(userId, patch.email);
 }
 
 export async function getUser(userId: string): Promise<User | null> {
-  const users = await db.users();
-  const found = users.find((u) => u.id === userId);
-  return found ? publicUser(found) : null;
+  try {
+    return await profileOf(userId);
+  } catch {
+    return null;
+  }
 }
 
+/**
+ * Profils connus, pour afficher les vendeurs et les interlocuteurs.
+ * Plafonné : à volume important, il faudra charger à la demande par identifiant.
+ */
 export async function getUsers(): Promise<User[]> {
-  const users = await db.users();
-  return users.map(publicUser);
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(PROFILE_SELECT)
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (error) fail(error, 'Chargement des profils impossible.');
+  return (data as ProfileRow[]).map((row) => toUser(row));
 }

@@ -1,4 +1,4 @@
-/** Modèle de données d'Archers Market. */
+/** Modèle de données d'Archers Market (miroir du schéma Supabase). */
 
 export type CategoryId =
   | 'bow-recurve'
@@ -18,23 +18,22 @@ export type ConditionId = 'new' | 'like-new' | 'very-good' | 'good' | 'fair';
 
 export type Handedness = 'right' | 'left' | 'na';
 
-export type ListingStatus = 'active' | 'reserved' | 'sold';
+export type ListingStatus = 'draft' | 'active' | 'reserved' | 'sold';
 
 export interface User {
   id: string;
   name: string;
   handle: string;
-  email: string;
-  /** Uniquement pour le mock local : jamais un vrai backend d'auth. */
-  password?: string;
+  /** Connu uniquement pour l'utilisateur connecté. */
+  email?: string;
   city: string;
   club?: string;
   bio?: string;
+  discipline?: string;
   avatarColor: string;
   rating: number;
   reviewCount: number;
   memberSince: string;
-  discipline?: string;
 }
 
 export interface Listing {
@@ -61,7 +60,7 @@ export interface Listing {
   city: string;
   shipping: boolean;
   shippingPrice?: number;
-  /** Clé de visuel intégré (voir categoryImages) ou URI d'une photo choisie. */
+  /** URL publique des photos, ou clé de visuel de catégorie si l'annonce n'en a pas. */
   images: string[];
   status: ListingStatus;
   createdAt: string;
@@ -84,8 +83,8 @@ export interface Conversation {
   buyerId: string;
   sellerId: string;
   updatedAt: string;
-  /** Ids des participants ayant lu la conversation jusqu'à updatedAt. */
-  readBy: string[];
+  /** Dernière lecture par l'utilisateur connecté. */
+  readAt: string | null;
 }
 
 export interface ListingFilters {
@@ -120,5 +119,6 @@ export interface NewListingInput {
   city: string;
   shipping: boolean;
   shippingPrice?: number;
-  images?: string[];
+  /** URI locales des photos choisies dans la galerie. */
+  photos?: string[];
 }

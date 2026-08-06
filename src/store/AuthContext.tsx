@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 
 import * as authService from '@/services/auth';
 import type { Credentials, SignUpInput } from '@/services/auth';
-import { init } from '@/services/db';
+import { supabase } from '@/services/supabase';
 import type { User } from '@/types';
 
 interface AuthValue {
@@ -24,22 +24,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshUsers = useCallback(async () => {
-    setUsers(await authService.getUsers());
+    try {
+      setUsers(await authService.getUsers());
+    } catch {
+      // L'annuaire des profils n'est qu'un cache d'affichage : son échec ne
+      // doit pas empêcher l'utilisation de l'app.
+    }
   }, []);
 
   useEffect(() => {
     (async () => {
-      await init();
-      const [restored] = await Promise.all([authService.restoreSession(), refreshUsers()]);
+      const restored = await authService.restoreSession().catch(() => null);
       setUser(restored);
       setLoading(false);
+      refreshUsers();
     })();
+
+    // Déconnexion depuis un autre onglet, jeton expiré, etc.
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') setUser(null);
+    });
+    return () => data.subscription.unsubscribe();
   }, [refreshUsers]);
 
   const signIn = useCallback(
     async (credentials: Credentials) => {
       setUser(await authService.signIn(credentials));
-      await refreshUsers();
+      refreshUsers();
     },
     [refreshUsers],
   );
@@ -47,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = useCallback(
     async (input: SignUpInput) => {
       setUser(await authService.signUp(input));
-      await refreshUsers();
+      refreshUsers();
     },
     [refreshUsers],
   );
@@ -60,13 +71,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = useCallback(
     async (patch: Partial<User>) => {
       if (!user) return;
-      setUser(await authService.updateProfile(user.id, patch));
-      await refreshUsers();
+      setUser(await authService.updateProfile(user.id, { ...patch, email: user.email }));
+      refreshUsers();
     },
     [refreshUsers, user],
   );
 
-  const userById = useCallback((id: string) => users.find((u) => u.id === id), [users]);
+  const userById = useCallback(
+    (id: string) => (user?.id === id ? user : users.find((u) => u.id === id)),
+    [user, users],
+  );
 
   const value = useMemo<AuthValue>(
     () => ({ user, users, loading, signIn, signUp, signOut, updateProfile, userById }),

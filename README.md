@@ -50,15 +50,21 @@ fiches stores existantes :
 
 L'ancienne version publiée est la 1.1.3 ; `app.json` est donc en 2.0.0.
 
-## Base de données
+## Base de données (Supabase)
 
-`supabase/migrations/0001_init.sql` contient le schéma cible : profils, annonces et leurs photos,
-favoris, conversations et messages, avec la sécurité au niveau ligne (RLS) et le bucket Storage
-des photos. Il s'applique tel quel sur un projet Supabase neuf
-(`supabase db push`, ou copier-coller dans l'éditeur SQL).
+Les clés client vivent dans `.env` (`EXPO_PUBLIC_SUPABASE_URL` et `EXPO_PUBLIC_SUPABASE_KEY`) ;
+elles sont publiques par conception — c'est la sécurité au niveau ligne (RLS) qui protège les
+données, jamais la clé. La clé secrète ne doit jamais entrer dans ce dépôt.
 
-Tant qu'aucun backend n'est configuré, l'app fonctionne sur son jeu de démonstration local
-(voir ci-dessous).
+Pour initialiser un projet neuf, appliquer `supabase/migrations/0001_init.sql` :
+soit `supabase db push`, soit un copier-coller dans l'éditeur SQL du tableau de bord. Le script crée :
+
+- les tables `profiles`, `listings`, `listing_images`, `favorites`, `conversations`,
+  `messages`, `conversation_reads` ;
+- les politiques RLS (chacun ne modifie que ses annonces, une conversation n'est lisible que
+  par ses deux participants, les favoris sont privés) ;
+- le bucket Storage `listing-photos` et ses règles d'écriture par vendeur ;
+- la création automatique du profil à l'inscription et la publication temps réel de la messagerie.
 
 ## Architecture
 

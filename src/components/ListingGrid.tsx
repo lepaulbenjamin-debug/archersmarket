@@ -33,6 +33,17 @@ export function ListingGrid({
     [listings],
   );
 
+  // Rendu direct plutôt que ListEmptyComponent : avec numColumns, la FlatList
+  // n'affiche pas son composant de liste vide.
+  if (listings.length === 0 && (header || empty)) {
+    return (
+      <View style={styles.emptyWrap}>
+        {header}
+        {empty}
+      </View>
+    );
+  }
+
   return (
     <FlatList
       data={data}
@@ -43,7 +54,6 @@ export function ListingGrid({
       contentContainerStyle={[styles.content, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={header}
-      ListEmptyComponent={empty}
       renderItem={({ item }) =>
         item ? (
           <ListingCard
@@ -63,4 +73,5 @@ const styles = StyleSheet.create({
   row: { gap: spacing.md },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   spacer: { flex: 1 },
+  emptyWrap: { paddingHorizontal: spacing.lg },
 });

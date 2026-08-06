@@ -8,6 +8,7 @@ import type { Listing, ListingFilters, ListingStatus, NewListingInput } from '@/
 interface ListingsValue {
   listings: Listing[];
   loading: boolean;
+  error: string | null;
   favorites: string[];
   refresh: () => Promise<void>;
   listingById: (id: string) => Listing | undefined;
@@ -29,9 +30,15 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    setListings(await listingsService.fetchListings());
+    try {
+      setListings(await listingsService.fetchListings());
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }, []);
 
   useEffect(() => {
@@ -48,7 +55,7 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
         setFavorites([]);
         return;
       }
-      setFavorites(await favoritesService.fetchFavorites(user.id));
+      setFavorites(await favoritesService.fetchFavorites(user.id).catch(() => []));
     })();
   }, [user]);
 
@@ -74,9 +81,17 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
   const toggleFavorite = useCallback(
     async (id: string) => {
       if (!user) return;
-      setFavorites(await favoritesService.toggleFavorite(user.id, id));
+      const wasFavorite = favorites.includes(id);
+      // Bascule optimiste : l'annulation remet l'état d'origine.
+      setFavorites((prev) => (wasFavorite ? prev.filter((f) => f !== id) : [id, ...prev]));
+      try {
+        if (wasFavorite) await favoritesService.removeFavorite(user.id, id);
+        else await favoritesService.addFavorite(user.id, id);
+      } catch {
+        setFavorites((prev) => (wasFavorite ? [id, ...prev] : prev.filter((f) => f !== id)));
+      }
     },
-    [user],
+    [favorites, user],
   );
 
   const createListing = useCallback(
@@ -90,11 +105,13 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const setStatus = useCallback(async (id: string, status: ListingStatus) => {
-    setListings(await listingsService.updateListingStatus(id, status));
+    const updated = await listingsService.updateListingStatus(id, status);
+    setListings((prev) => prev.map((l) => (l.id === id ? updated : l)));
   }, []);
 
   const removeListing = useCallback(async (id: string) => {
-    setListings(await listingsService.deleteListing(id));
+    await listingsService.deleteListing(id);
+    setListings((prev) => prev.filter((l) => l.id !== id));
   }, []);
 
   const registerView = useCallback(async (id: string) => {
@@ -106,6 +123,7 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
     () => ({
       listings,
       loading,
+      error,
       favorites,
       refresh,
       listingById,
@@ -121,6 +139,7 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       createListing,
+      error,
       favoriteListings,
       favorites,
       isFavorite,

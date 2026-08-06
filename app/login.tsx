@@ -15,7 +15,6 @@ import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { Logo } from '@/components/Logo';
 import { Header, Screen } from '@/components/Screen';
-import { demoAccount } from '@/data/seed';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 
@@ -27,11 +26,11 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const submit = async (credentials = { email, password }) => {
+  const submit = async () => {
     setError(null);
     setLoading(true);
     try {
-      await signIn(credentials);
+      await signIn({ email, password });
       router.canGoBack() ? router.back() : router.replace('/');
     } catch (err) {
       setError((err as Error).message);
@@ -75,19 +74,7 @@ export default function LoginScreen() {
             error={error ?? undefined}
           />
 
-          <Button label="Se connecter" onPress={() => submit()} loading={loading} />
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => submit(demoAccount)}
-            style={({ pressed }) => [styles.demo, pressed && styles.pressed]}
-          >
-            <MaterialCommunityIcons name="flash-outline" size={17} color={colors.primary} />
-            <View style={styles.flex}>
-              <Text style={styles.demoTitle}>Essayer avec le compte de démo</Text>
-              <Text style={styles.demoText}>{demoAccount.email} · demo1234</Text>
-            </View>
-          </Pressable>
+          <Button label="Se connecter" onPress={submit} loading={loading} />
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Pas encore de compte ?</Text>
@@ -111,16 +98,6 @@ const styles = StyleSheet.create({
   intro: { gap: spacing.xs, marginBottom: spacing.sm, alignItems: 'center' },
   introTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: spacing.lg },
   introText: { fontSize: 14, color: colors.textMuted, lineHeight: 20, textAlign: 'center' },
-  demo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.primarySoft,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-  },
-  demoTitle: { fontSize: 14, fontWeight: '700', color: colors.primary },
-  demoText: { fontSize: 12.5, color: colors.primaryDark, marginTop: 2 },
   footer: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: spacing.sm },
   footerText: { color: colors.textMuted, fontSize: 14 },
   footerAction: { color: colors.primary, fontSize: 14, fontWeight: '700' },

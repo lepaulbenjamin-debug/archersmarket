@@ -130,7 +130,7 @@ export default function SellScreen() {
         city: city.trim(),
         shipping,
         shippingPrice: shipping ? Number(shippingPrice.replace(',', '.')) || undefined : undefined,
-        images: photos,
+        photos,
       });
       setTitle('');
       setDescription('');

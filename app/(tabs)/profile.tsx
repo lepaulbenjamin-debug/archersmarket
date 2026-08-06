@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { BuyerPicker } from '@/components/BuyerPicker';
@@ -16,6 +16,7 @@ import { fetchPendingReviews, fetchReviews } from '@/services/reviews';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
+import { usePush } from '@/store/PushContext';
 import { formatMemberSince, formatPrice } from '@/utils/format';
 import { imageSource } from '@/utils/images';
 import type { ListingStatus, PendingReview, Review } from '@/types';
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const [pending, setPending] = useState<PendingReview[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [sellingListingId, setSellingListingId] = useState<string | null>(null);
+  const { enabled: pushEnabled, unavailable: pushUnavailable, toggle: togglePush } = usePush();
 
   const myListings = useMemo(
     () => (user ? listingsBySeller(user.id) : []),
@@ -165,6 +167,24 @@ export default function ProfileScreen() {
             ))}
           </View>
         ) : null}
+
+        <View style={styles.settings}>
+          <View style={styles.settingRow}>
+            <MaterialCommunityIcons name="bell-outline" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Notifications</Text>
+              <Text style={styles.settingHint}>
+                {pushUnavailable ?? 'Être prévenu des messages, offres et avis reçus.'}
+              </Text>
+            </View>
+            <Switch
+              value={pushEnabled}
+              onValueChange={togglePush}
+              trackColor={{ true: colors.primary, false: colors.borderStrong }}
+              thumbColor={colors.surface}
+            />
+          </View>
+        </View>
 
         <View style={styles.tabs}>
           <TabButton
@@ -370,6 +390,22 @@ const styles = StyleSheet.create({
   pendingText: { flex: 1 },
   pendingListing: { fontSize: 13.5, fontWeight: '700', color: colors.text },
   pendingRole: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
+  settings: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  settingText: { flex: 1 },
+  settingLabel: { fontSize: 14.5, fontWeight: '700', color: colors.text },
+  settingHint: { fontSize: 12, color: colors.textMuted, marginTop: 2, lineHeight: 17 },
   tabs: { flexDirection: 'row', gap: spacing.sm },
   tab: {
     flex: 1,

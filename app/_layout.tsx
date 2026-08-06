@@ -9,6 +9,7 @@ import { colors } from '@/theme';
 import { AuthProvider, useAuth } from '@/store/AuthContext';
 import { ListingsProvider } from '@/store/ListingsContext';
 import { MessagesProvider } from '@/store/MessagesContext';
+import { PushProvider } from '@/store/PushContext';
 
 function RootNavigator() {
   const { loading } = useAuth();
@@ -46,8 +47,10 @@ export default function RootLayout() {
         <AuthProvider>
           <ListingsProvider>
             <MessagesProvider>
-              <StatusBar style="dark" />
-              <RootNavigator />
+              <PushProvider>
+                <StatusBar style="dark" />
+                <RootNavigator />
+              </PushProvider>
             </MessagesProvider>
           </ListingsProvider>
         </AuthProvider>

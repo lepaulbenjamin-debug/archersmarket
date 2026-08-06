@@ -18,6 +18,7 @@ import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { ListingCard } from '@/components/ListingCard';
 import { Rating } from '@/components/Rating';
+import { ReportSheet } from '@/components/ReportSheet';
 import { Screen } from '@/components/Screen';
 import { categoryById, conditionById, handednessLabel } from '@/data/catalog';
 import { colors, radius, spacing } from '@/theme';
@@ -36,6 +37,7 @@ export default function ListingScreen() {
   const { listingById, listings, isFavorite, toggleFavorite, registerView } = useListings();
   const { openConversation } = useMessages();
   const [imageIndex, setImageIndex] = useState(0);
+  const [reporting, setReporting] = useState(false);
   const viewed = useRef(false);
 
   const listing = id ? listingById(id) : undefined;
@@ -246,6 +248,17 @@ export default function ListingScreen() {
             </>
           ) : null}
 
+          {!isOwner ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setReporting(true)}
+              style={({ pressed }) => [styles.report, pressed && styles.pressed]}
+            >
+              <MaterialCommunityIcons name="flag-outline" size={15} color={colors.textMuted} />
+              <Text style={styles.reportLabel}>Signaler cette annonce</Text>
+            </Pressable>
+          ) : null}
+
           {similar.length > 0 ? (
             <>
               <Text style={styles.sectionTitle}>Annonces similaires</Text>
@@ -264,6 +277,13 @@ export default function ListingScreen() {
           ) : null}
         </View>
       </ScrollView>
+
+      <ReportSheet
+        visible={reporting}
+        onClose={() => setReporting(false)}
+        listingId={listing.id}
+        subject={listing.title}
+      />
 
       <SafeAreaView edges={['bottom']} style={styles.footer}>
         <View style={styles.footerInner}>
@@ -428,6 +448,15 @@ const styles = StyleSheet.create({
   sellerText: { flex: 1, gap: 2 },
   sellerName: { fontSize: 15.5, fontWeight: '700', color: colors.text },
   sellerClub: { fontSize: 12.5, color: colors.textFaint },
+  report: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  reportLabel: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   similarRow: { gap: spacing.md, paddingVertical: 2 },
   similarCard: { width: 168 },
   footer: {

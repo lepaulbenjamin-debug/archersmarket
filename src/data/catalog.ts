@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import type { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import type { CategoryId, ConditionId, Handedness, SortOption } from '@/types';
+import type { CategoryId, ConditionId, Handedness, ReportReason, SortOption } from '@/types';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -110,3 +110,25 @@ export const categoryImages: Record<CategoryId, number> = {
   target: require('../../assets/listings/target.png'),
   apparel: require('../../assets/listings/apparel.png'),
 };
+
+export const reportReasons: Array<{ id: ReportReason; label: string; hint: string }> = [
+  {
+    id: 'prohibited',
+    label: 'Matériel interdit ou dangereux',
+    hint: 'Arme prohibée, arc endommagé vendu comme sain, pointes de chasse sans précaution.',
+  },
+  {
+    id: 'misleading',
+    label: 'Annonce trompeuse',
+    hint: 'État, marque ou caractéristiques ne correspondant pas au matériel.',
+  },
+  { id: 'counterfeit', label: 'Contrefaçon', hint: 'Copie vendue pour du matériel de marque.' },
+  {
+    id: 'scam',
+    label: 'Tentative d’arnaque',
+    hint: 'Paiement demandé hors de l’application, acompte suspect, coordonnées douteuses.',
+  },
+  { id: 'offensive', label: 'Propos offensants', hint: 'Insultes, harcèlement, contenu déplacé.' },
+  { id: 'spam', label: 'Spam ou doublon', hint: 'Annonce répétée, publicité, hors sujet.' },
+  { id: 'other', label: 'Autre motif', hint: 'Précisez ci-dessous.' },
+];

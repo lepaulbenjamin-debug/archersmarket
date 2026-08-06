@@ -109,6 +109,15 @@ export interface PendingReview {
   role: 'seller' | 'buyer';
 }
 
+export type ReportReason =
+  | 'counterfeit'
+  | 'prohibited'
+  | 'misleading'
+  | 'scam'
+  | 'offensive'
+  | 'spam'
+  | 'other';
+
 export interface ListingFilters {
   query?: string;
   categories?: CategoryId[];

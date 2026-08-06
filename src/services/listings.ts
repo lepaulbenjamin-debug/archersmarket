@@ -126,10 +126,11 @@ export async function createListing(
 export async function updateListingStatus(
   listingId: string,
   status: ListingStatus,
+  buyerId?: string | null,
 ): Promise<Listing> {
   const { data, error } = await supabase
     .from('listings')
-    .update({ status })
+    .update(buyerId === undefined ? { status } : { status, buyer_id: buyerId })
     .eq('id', listingId)
     .select(LISTING_SELECT)
     .single();

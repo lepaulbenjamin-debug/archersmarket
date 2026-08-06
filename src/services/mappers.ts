@@ -1,5 +1,5 @@
 import { LISTING_PHOTOS_BUCKET, supabase } from '@/services/supabase';
-import type { Conversation, Listing, Message, User } from '@/types';
+import type { Conversation, Listing, Message, Review, User } from '@/types';
 
 /** Lignes telles que renvoyées par PostgREST (snake_case). */
 export interface ProfileRow {
@@ -19,6 +19,7 @@ export interface ProfileRow {
 export interface ListingRow {
   id: string;
   seller_id: string;
+  buyer_id?: string | null;
   title: string;
   description: string;
   price: number | string;
@@ -47,6 +48,16 @@ export interface ConversationRow {
   buyer_id: string;
   seller_id: string;
   updated_at: string;
+}
+
+export interface ReviewRow {
+  id: string;
+  listing_id: string;
+  author_id: string;
+  subject_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
 }
 
 export interface MessageRow {
@@ -93,6 +104,7 @@ export function toListing(row: ListingRow): Listing {
   return {
     id: row.id,
     sellerId: row.seller_id,
+    buyerId: row.buyer_id ?? undefined,
     title: row.title,
     description: row.description,
     price: num(row.price) ?? 0,
@@ -135,6 +147,18 @@ export function toMessage(row: MessageRow): Message {
     senderId: row.sender_id,
     text: row.body,
     offer: num(row.offer),
+    createdAt: row.created_at,
+  };
+}
+
+export function toReview(row: ReviewRow): Review {
+  return {
+    id: row.id,
+    listingId: row.listing_id,
+    authorId: row.author_id,
+    subjectId: row.subject_id,
+    rating: row.rating,
+    comment: row.comment ?? undefined,
     createdAt: row.created_at,
   };
 }

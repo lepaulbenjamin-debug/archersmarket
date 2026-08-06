@@ -18,7 +18,7 @@ interface ListingsValue {
   isFavorite: (id: string) => boolean;
   toggleFavorite: (id: string) => Promise<void>;
   createListing: (input: NewListingInput) => Promise<Listing>;
-  setStatus: (id: string, status: ListingStatus) => Promise<void>;
+  setStatus: (id: string, status: ListingStatus, buyerId?: string | null) => Promise<void>;
   removeListing: (id: string) => Promise<void>;
   registerView: (id: string) => Promise<void>;
 }
@@ -104,10 +104,13 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
     [user],
   );
 
-  const setStatus = useCallback(async (id: string, status: ListingStatus) => {
-    const updated = await listingsService.updateListingStatus(id, status);
+  const setStatus = useCallback(
+    async (id: string, status: ListingStatus, buyerId?: string | null) => {
+    const updated = await listingsService.updateListingStatus(id, status, buyerId);
     setListings((prev) => prev.map((l) => (l.id === id ? updated : l)));
-  }, []);
+    },
+    [],
+  );
 
   const removeListing = useCallback(async (id: string) => {
     await listingsService.deleteListing(id);

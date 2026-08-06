@@ -1,30 +1,47 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { Image } from 'expo-image';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { BuyerPicker } from '@/components/BuyerPicker';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { ListingCard } from '@/components/ListingCard';
 import { Rating } from '@/components/Rating';
+import { ReviewList } from '@/components/ReviewList';
 import { Header, Screen } from '@/components/Screen';
+import { fetchPendingReviews, fetchReviews } from '@/services/reviews';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
 import { formatMemberSince, formatPrice } from '@/utils/format';
-import type { ListingStatus } from '@/types';
+import { imageSource } from '@/utils/images';
+import type { ListingStatus, PendingReview, Review } from '@/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { listingsBySeller, favoriteListings, setStatus, removeListing, isFavorite, toggleFavorite } =
     useListings();
-  const [tab, setTab] = useState<'listings' | 'favorites'>('listings');
+  const [tab, setTab] = useState<'listings' | 'favorites' | 'reviews'>('listings');
+  const [pending, setPending] = useState<PendingReview[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [sellingListingId, setSellingListingId] = useState<string | null>(null);
 
   const myListings = useMemo(
     () => (user ? listingsBySeller(user.id) : []),
     [listingsBySeller, user],
+  );
+
+  // Rechargé à chaque retour sur l'onglet : un avis a pu être publié entre-temps.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      fetchPendingReviews(user.id).then(setPending).catch(() => setPending([]));
+      fetchReviews(user.id).then(setReviews).catch(() => setReviews([]));
+    }, [user]),
   );
 
   const stats = useMemo(() => {
@@ -57,10 +74,30 @@ export default function ProfileScreen() {
     );
   }
 
+  const sellingListing = myListings.find((l) => l.id === sellingListingId);
+
   const cycleStatus = (id: string, current: ListingStatus) => {
-    const next: ListingStatus =
-      current === 'active' ? 'reserved' : current === 'reserved' ? 'sold' : 'active';
-    setStatus(id, next);
+    if (current === 'reserved') {
+      // Conclure une vente passe par la désignation de l'acheteur.
+      setSellingListingId(id);
+      return;
+    }
+    setStatus(id, current === 'active' ? 'reserved' : 'active');
+  };
+
+  const confirmSale = async (buyerId: string | null) => {
+    if (!sellingListingId) return;
+    const id = sellingListingId;
+    setSellingListingId(null);
+    try {
+      await setStatus(id, 'sold', buyerId);
+      if (buyerId) {
+        const refreshed = await fetchPendingReviews(user.id);
+        setPending(refreshed);
+      }
+    } catch (error) {
+      Alert.alert('Mise à jour impossible', (error as Error).message);
+    }
   };
 
   const confirmDelete = (id: string, title: string) => {
@@ -98,9 +135,40 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {pending.length > 0 ? (
+          <View style={styles.pendingBlock}>
+            <Text style={styles.pendingTitle}>
+              {pending.length === 1 ? 'Une transaction à noter' : `${pending.length} transactions à noter`}
+            </Text>
+            {pending.map((item) => (
+              <Pressable
+                key={item.listingId}
+                accessibilityRole="button"
+                onPress={() => router.push(`/review/${item.listingId}`)}
+                style={({ pressed }) => [styles.pendingRow, pressed && styles.pressed]}
+              >
+                <Image
+                  source={imageSource(item.image, item.category)}
+                  style={styles.pendingImage}
+                  contentFit="cover"
+                />
+                <View style={styles.pendingText}>
+                  <Text style={styles.pendingListing} numberOfLines={1}>
+                    {item.listingTitle}
+                  </Text>
+                  <Text style={styles.pendingRole}>
+                    Noter {item.role === 'seller' ? 'l’acheteur' : 'le vendeur'}
+                  </Text>
+                </View>
+                <MaterialCommunityIcons name="star-outline" size={20} color={colors.primary} />
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         <View style={styles.tabs}>
           <TabButton
-            label={`Mes annonces (${myListings.length})`}
+            label={`Annonces (${myListings.length})`}
             active={tab === 'listings'}
             onPress={() => setTab('listings')}
           />
@@ -108,6 +176,11 @@ export default function ProfileScreen() {
             label={`Favoris (${favoriteListings.length})`}
             active={tab === 'favorites'}
             onPress={() => setTab('favorites')}
+          />
+          <TabButton
+            label={`Avis (${reviews.length})`}
+            active={tab === 'reviews'}
+            onPress={() => setTab('reviews')}
           />
         </View>
 
@@ -117,7 +190,7 @@ export default function ProfileScreen() {
               icon="tag-outline"
               title="Aucune annonce publiée"
               description="Vendez votre matériel inutilisé à d’autres archers."
-              actionLabel="Déposer une annonce"
+              actionLabel="Publier une annonce"
               onAction={() => router.push('/(tabs)/sell')}
             />
           ) : (
@@ -150,26 +223,33 @@ export default function ProfileScreen() {
               ))}
             </View>
           )
-        ) : favoriteListings.length === 0 ? (
-          <EmptyState
-            icon="heart-outline"
-            title="Aucun favori"
-            description="Touchez le cœur d’une annonce pour la retrouver ici."
-            actionLabel="Explorer"
-            onAction={() => router.push('/(tabs)')}
-          />
+        ) : tab === 'favorites' ? (
+          favoriteListings.length === 0 ? (
+            <EmptyState
+              icon="heart-outline"
+              title="Aucun favori"
+              description="Touchez le cœur d’une annonce pour la retrouver ici."
+              actionLabel="Explorer"
+              onAction={() => router.push('/(tabs)')}
+            />
+          ) : (
+            <View style={styles.list}>
+              {favoriteListings.map((listing) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  wide
+                  isFavorite={isFavorite(listing.id)}
+                  onToggleFavorite={() => toggleFavorite(listing.id)}
+                />
+              ))}
+            </View>
+          )
         ) : (
-          <View style={styles.list}>
-            {favoriteListings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                wide
-                isFavorite={isFavorite(listing.id)}
-                onToggleFavorite={() => toggleFavorite(listing.id)}
-              />
-            ))}
-          </View>
+          <ReviewList
+            reviews={reviews}
+            emptyLabel="Personne ne vous a encore noté. Les avis arrivent après vos premières ventes conclues dans l’application."
+          />
         )}
 
         <Button
@@ -180,6 +260,14 @@ export default function ProfileScreen() {
           style={styles.signOut}
         />
       </ScrollView>
+
+      <BuyerPicker
+        visible={!!sellingListingId}
+        listingId={sellingListingId}
+        listingTitle={sellingListing?.title}
+        onClose={() => setSellingListingId(null)}
+        onConfirm={confirmSale}
+      />
     </Screen>
   );
 }
@@ -224,7 +312,9 @@ function TabButton({
       onPress={onPress}
       style={[styles.tab, active && styles.tabActive]}
     >
-      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
+      <Text style={[styles.tabLabel, active && styles.tabLabelActive]} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -256,23 +346,49 @@ const styles = StyleSheet.create({
   stat: { flex: 1, alignItems: 'center', gap: 2 },
   statValue: { fontSize: 16, fontWeight: '800', color: colors.primary },
   statLabel: { fontSize: 11.5, color: colors.textFaint, fontWeight: '600' },
+  pendingBlock: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  pendingTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: colors.primaryDark,
+    paddingHorizontal: spacing.xs,
+  },
+  pendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+  },
+  pendingImage: { width: 42, height: 42, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt },
+  pendingText: { flex: 1 },
+  pendingListing: { fontSize: 13.5, fontWeight: '700', color: colors.text },
+  pendingRole: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
   tabs: { flexDirection: 'row', gap: spacing.sm },
   tab: {
     flex: 1,
     paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.pill,
     alignItems: 'center',
     backgroundColor: colors.surfaceAlt,
   },
   tabActive: { backgroundColor: colors.primary },
-  tabLabel: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
+  tabLabel: { fontSize: 12.5, fontWeight: '700', color: colors.textMuted },
   tabLabelActive: { color: colors.onPrimary },
   list: { gap: spacing.md },
   myListing: { gap: spacing.sm },
   actions: { flexDirection: 'row', gap: spacing.sm },
-  actionButton: { flex: 1 },
+  actionButton: { flex: 1, paddingHorizontal: spacing.md },
   signOut: { marginTop: spacing.sm },
   registerLink: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
   registerText: { color: colors.textMuted, fontSize: 14 },
   registerAction: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  pressed: { opacity: 0.85 },
 });

@@ -57,6 +57,8 @@ export interface Listing {
   spine?: number;
   size?: string;
   sellerId: string;
+  /** Acheteur désigné par le vendeur au moment de conclure la vente. */
+  buyerId?: string;
   city: string;
   shipping: boolean;
   shippingPrice?: number;
@@ -85,6 +87,26 @@ export interface Conversation {
   updatedAt: string;
   /** Dernière lecture par l'utilisateur connecté. */
   readAt: string | null;
+}
+
+export interface Review {
+  id: string;
+  listingId: string;
+  authorId: string;
+  subjectId: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
+/** Vente conclue que l'utilisateur n'a pas encore notée. */
+export interface PendingReview {
+  listingId: string;
+  listingTitle: string;
+  category: CategoryId;
+  image?: string;
+  counterpartId: string;
+  role: 'seller' | 'buyer';
 }
 
 export interface ListingFilters {

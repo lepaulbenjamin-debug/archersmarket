@@ -1,23 +1,33 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { EmptyState } from '@/components/EmptyState';
 import { ListingGrid } from '@/components/ListingGrid';
 import { Rating } from '@/components/Rating';
+import { ReviewList } from '@/components/ReviewList';
 import { Header, Screen } from '@/components/Screen';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
+import { fetchReviews } from '@/services/reviews';
 import { formatMemberSince } from '@/utils/format';
+import type { Review } from '@/types';
 
 export default function SellerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { userById, user: currentUser } = useAuth();
   const { listingsBySeller, isFavorite, toggleFavorite } = useListings();
+
+  const [reviews, setReviews] = useState<Review[]>([]);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchReviews(id).then(setReviews).catch(() => setReviews([]));
+  }, [id]);
 
   const seller = id ? userById(id) : undefined;
   const listings = useMemo(
@@ -66,6 +76,18 @@ export default function SellerScreen() {
                 label={`Membre depuis ${formatMemberSince(seller.memberSince)}`}
               />
             </View>
+            <View style={styles.reviews}>
+              <Text style={styles.sectionTitle}>
+                {reviews.length === 0
+                  ? 'Avis'
+                  : `${reviews.length} avis reçu${reviews.length > 1 ? 's' : ''}`}
+              </Text>
+              <ReviewList
+                reviews={reviews.slice(0, 5)}
+                emptyLabel="Ce membre n’a pas encore reçu d’avis."
+              />
+            </View>
+
             <Text style={styles.sectionTitle}>
               {listings.length} annonce{listings.length > 1 ? 's' : ''} en ligne
             </Text>
@@ -110,6 +132,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaLabel: { fontSize: 12.5, color: colors.textMuted },
+  reviews: { gap: spacing.sm },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '800',

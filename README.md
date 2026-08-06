@@ -12,8 +12,7 @@ npm run android    # ou ios / web
 npm run typecheck  # vérification TypeScript
 ```
 
-Compte de démonstration pré-rempli sur l'écran de connexion :
-`camille@archersmarket.fr` / `demo1234`.
+Les données viennent d'un projet Supabase : voir « Base de données » plus bas pour l'initialiser.
 
 ## Fonctionnalités
 
@@ -77,8 +76,8 @@ app/                    routes expo-router
   login.tsx register.tsx
 src/
   components/           Logo, ListingCard, ListingGrid, FiltersSheet, Button, Chip, Field…
-  data/                 catalogue métier (catégories, marques, états) et jeu de démonstration
-  services/             couche d'accès aux données (auth, listings, messages, favorites)
+  data/                 catalogue métier (catégories, marques, états)
+  services/             accès aux données Supabase (auth, listings, photos, messages, favorites)
   store/                contextes React (Auth, Listings, Messages)
   theme/                design tokens de la charte
   utils/                formatage, résolution des visuels
@@ -87,9 +86,12 @@ assets/                 icônes, splash, visuels de catégorie
 
 ### Données
 
-Tout passe par `src/services/*`, adossé à un stockage local (AsyncStorage) alimenté par un jeu de
-démonstration au premier lancement. Les écrans ne connaissent que ces services : brancher un vrai
-backend (Supabase, API REST…) revient à réimplémenter `src/services/` sans toucher à l'interface.
+Les écrans ne parlent jamais à Supabase directement : tout passe par `src/services/*`, qui
+convertit les lignes de la base (snake_case) vers le modèle de l'app (`src/types`). Changer de
+backend revient donc à réimplémenter ces fichiers, sans toucher à l'interface.
+
+Le fil d'annonces est chargé en une fois (500 max) puis filtré et trié côté client, ce qui rend
+les filtres instantanés ; à fort volume, ces critères devront passer dans la requête SQL.
 
 ### Identité visuelle
 

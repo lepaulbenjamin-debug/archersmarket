@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Field } from '@/components/Field';
 import { Header, Screen } from '@/components/Screen';
 import { brands, categories, categoryById, conditions, handednessOptions } from '@/data/catalog';
+import { consumeImportDraft } from '@/services/importListing';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
@@ -54,8 +55,44 @@ export default function SellScreen() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [imported, setImported] = useState(false);
 
   const activeCategory = useMemo(() => categoryById(category), [category]);
+
+  /**
+   * Un import déposé par l'écran « Importer une annonce » remplit le formulaire.
+   * Rien n'est publié : le vendeur relit et corrige avant d'envoyer.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      // Tant que personne n'est connecté, le brouillon attend : le consommer
+      // ici le perdrait au profit de l'invitation à se connecter.
+      if (!user) return;
+      const draft = consumeImportDraft();
+      if (!draft) return;
+
+      if (draft.title) setTitle(draft.title.slice(0, 80));
+      if (draft.description) setDescription(draft.description);
+      if (draft.price) setPrice(String(draft.price));
+      if (draft.city) setCity(draft.city);
+      if (draft.category) setCategory(draft.category);
+      if (draft.brand) setBrand(draft.brand);
+      if (draft.condition) setCondition(draft.condition);
+      if (draft.handedness) setHandedness(draft.handedness);
+      if (draft.shipping != null) setShipping(draft.shipping);
+      if (draft.photoUrls?.length) setPhotos(draft.photoUrls.slice(0, 4));
+
+      const specsFromImport: Record<string, string> = {};
+      for (const key of ['drawWeight', 'bowLength', 'drawLength', 'spine'] as const) {
+        if (draft[key] != null) specsFromImport[key] = String(draft[key]);
+      }
+      if (draft.size) specsFromImport.size = draft.size;
+      if (Object.keys(specsFromImport).length) setSpecs(specsFromImport);
+
+      setErrors({});
+      setImported(true);
+    }, [user]),
+  );
 
   if (!user) {
     return (
@@ -155,6 +192,39 @@ export default function SellScreen() {
         style={styles.flex}
       >
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {imported ? (
+            <View style={styles.banner}>
+              <MaterialCommunityIcons name="import" size={18} color={colors.primaryDark} />
+              <Text style={styles.bannerText}>
+                Annonce importée. Vérifiez la catégorie, l’état et le prix : ces valeurs ont été
+                déduites du texte d’origine.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Masquer le message"
+                hitSlop={8}
+                onPress={() => setImported(false)}
+              >
+                <MaterialCommunityIcons name="close" size={16} color={colors.primaryDark} />
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/import')}
+              style={({ pressed }) => [styles.importCta, pressed && styles.pressed]}
+            >
+              <MaterialCommunityIcons name="link-variant" size={20} color={colors.primary} />
+              <View style={styles.flex}>
+                <Text style={styles.importTitle}>Importer depuis une annonce en ligne</Text>
+                <Text style={styles.importHint}>
+                  Collez un lien leboncoin : titre, photos et caractéristiques repris.
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+            </Pressable>
+          )}
+
           <Group title="Photos" hint="Jusqu’à 4 photos. Sans photo, un visuel de catégorie est utilisé.">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
               <Pressable
@@ -415,4 +485,25 @@ const styles = StyleSheet.create({
   switchHint: { fontSize: 12, color: colors.textFaint, marginTop: 2 },
   submit: { marginTop: spacing.sm },
   pressed: { opacity: 0.8 },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+  },
+  bannerText: { flex: 1, fontSize: 12.5, color: colors.primaryDark, lineHeight: 17 },
+  importCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  importTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+  importHint: { fontSize: 12, color: colors.textFaint, marginTop: 2, lineHeight: 16 },
 });

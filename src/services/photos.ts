@@ -1,4 +1,4 @@
-import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
+import { cacheDirectory, downloadAsync, readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 
 import { LISTING_PHOTOS_BUCKET, fail, supabase } from '@/services/supabase';
 
@@ -9,6 +9,22 @@ const extensionOf = (uri: string): string => {
 
 const contentTypeOf = (extension: string): string =>
   extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+
+/**
+ * Rapatrie une photo distante dans le cache pour qu'elle suive le même chemin
+ * qu'une photo de la galerie. Retourne null si le téléchargement échoue : une
+ * photo manquante ne doit pas empêcher l'import.
+ */
+export async function cacheRemotePhoto(url: string, index: number): Promise<string | null> {
+  if (!cacheDirectory) return null;
+  try {
+    const target = `${cacheDirectory}import-${Date.now()}-${index}.${extensionOf(url)}`;
+    const { uri, status } = await downloadAsync(url, target);
+    return status >= 200 && status < 300 ? uri : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Envoie une photo locale dans le bucket des annonces et retourne son chemin.

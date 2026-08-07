@@ -34,6 +34,7 @@ function RootNavigator() {
       <Stack.Screen name="chat/[id]" />
       <Stack.Screen name="seller/[id]" />
       <Stack.Screen name="review/[id]" />
+      <Stack.Screen name="import" />
       <Stack.Screen name="login" options={{ presentation: 'modal' }} />
       <Stack.Screen name="register" options={{ presentation: 'modal' }} />
     </Stack>

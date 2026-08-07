@@ -1,0 +1,259 @@
+/* Charte Archers Market : orange de marque, anthracite, fond clair. */
+:root {
+  --orange: #f5843c;
+  --orange-dark: #df6f27;
+  --orange-soft: #fdeee3;
+  --anthracite: #1b1b1d;
+  --texte: #1b1b1d;
+  --texte-doux: #5f5f63;
+  --texte-pale: #909095;
+  --bord: #e4e4e7;
+  --surface: #ffffff;
+  --surface-alt: #f4f4f5;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--texte);
+  background: var(--surface);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--orange-dark);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+.bandeau {
+  border-bottom: 1px solid var(--bord);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.bandeau-inner,
+main,
+footer .pied {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.bandeau-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  flex-wrap: wrap;
+}
+
+.marque {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  font-size: 15px;
+  color: var(--anthracite);
+  text-transform: uppercase;
+}
+.marque:hover {
+  text-decoration: none;
+}
+.marque img {
+  height: 30px;
+  width: auto;
+}
+
+.bandeau nav {
+  margin-left: auto;
+  display: flex;
+  gap: 18px;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+.bandeau nav a {
+  color: var(--texte-doux);
+  font-weight: 600;
+}
+.bandeau nav a[aria-current='page'] {
+  color: var(--orange-dark);
+}
+
+main {
+  padding-top: 40px;
+  padding-bottom: 64px;
+}
+
+.hero {
+  text-align: center;
+  padding: 48px 20px 40px;
+  background: linear-gradient(180deg, var(--orange-soft), var(--surface));
+  border-bottom: 1px solid var(--bord);
+}
+.hero img {
+  width: 132px;
+  height: auto;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 6vw, 40px);
+  letter-spacing: -0.02em;
+}
+.hero p {
+  margin: 0 auto;
+  max-width: 520px;
+  color: var(--texte-doux);
+  font-size: 17px;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+h1 {
+  font-size: clamp(26px, 5vw, 34px);
+  margin: 0 0 8px;
+}
+h2 {
+  font-size: 20px;
+  margin: 40px 0 12px;
+  padding-top: 8px;
+}
+h3 {
+  font-size: 16px;
+  margin: 24px 0 6px;
+}
+
+.chapo {
+  color: var(--texte-doux);
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+.maj {
+  color: var(--texte-pale);
+  font-size: 13px;
+  margin: 0 0 32px;
+}
+
+.cartes {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin: 32px 0;
+}
+.carte {
+  border: 1px solid var(--bord);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--surface);
+}
+.carte h3 {
+  margin-top: 0;
+}
+.carte p {
+  margin: 0;
+  color: var(--texte-doux);
+  font-size: 14.5px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14.5px;
+  display: block;
+  overflow-x: auto;
+}
+th,
+td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--bord);
+  vertical-align: top;
+}
+th {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texte-pale);
+}
+
+ul {
+  padding-left: 22px;
+}
+li {
+  margin-bottom: 6px;
+}
+
+.encart {
+  background: var(--orange-soft);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin: 24px 0;
+  font-size: 15px;
+}
+.encart p:last-child {
+  margin-bottom: 0;
+}
+.encart p:first-child {
+  margin-top: 0;
+}
+
+.aremplir {
+  border: 2px dashed var(--orange);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin: 24px 0;
+  background: #fff8f2;
+  font-size: 14.5px;
+}
+
+footer {
+  border-top: 1px solid var(--bord);
+  background: var(--surface-alt);
+  padding: 28px 0;
+  margin-top: 40px;
+}
+.pied {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  color: var(--texte-pale);
+}
+.pied a {
+  color: var(--texte-doux);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --texte: #f7f7f8;
+    --texte-doux: #b6b6bb;
+    --texte-pale: #8b8b90;
+    --bord: #33333a;
+    --surface: #131315;
+    --surface-alt: #1b1b1d;
+    --orange-soft: #2a1a10;
+    --orange-dark: #f5843c;
+    --anthracite: #f7f7f8;
+  }
+  .aremplir {
+    background: #241a12;
+  }
+}

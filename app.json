@@ -28,7 +28,10 @@
       },
       "predictiveBackGestureEnabled": false,
       "edgeToEdgeEnabled": true,
-      "versionCode": 2
+      "versionCode": 2,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -54,6 +57,13 @@
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "656990c6-e07c-4947-a61a-e2f4bcb5a08c"
+      }
+    },
+    "owner": "creaweb-conseil"
   }
 }

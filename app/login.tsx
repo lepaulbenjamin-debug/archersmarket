@@ -74,6 +74,15 @@ export default function LoginScreen() {
             error={error ?? undefined}
           />
 
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/forgot-password')}
+            hitSlop={6}
+            style={styles.forgot}
+          >
+            <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
+          </Pressable>
+
           <Button label="Se connecter" onPress={submit} loading={loading} />
 
           <View style={styles.footer}>
@@ -98,6 +107,8 @@ const styles = StyleSheet.create({
   intro: { gap: spacing.xs, marginBottom: spacing.sm, alignItems: 'center' },
   introTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: spacing.lg },
   introText: { fontSize: 14, color: colors.textMuted, lineHeight: 20, textAlign: 'center' },
+  forgot: { alignSelf: 'flex-end', marginTop: -spacing.sm },
+  forgotText: { fontSize: 13, fontWeight: '600', color: colors.primary },
   footer: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: spacing.sm },
   footerText: { color: colors.textMuted, fontSize: 14 },
   footerAction: { color: colors.primary, fontSize: 14, fontWeight: '700' },

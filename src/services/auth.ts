@@ -92,6 +92,48 @@ export async function signOut(): Promise<void> {
 }
 
 /**
+ * Demande un code de réinitialisation. La réponse ne dit jamais si l'adresse
+ * existe : le contraire permettrait de dresser la liste des membres.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+  // Une adresse inconnue n'est pas une erreur pour l'utilisateur légitime,
+  // qui s'est simplement trompé de boîte. Seule une panne réelle remonte.
+  if (error && !/user not found|invalid/i.test(error.message)) {
+    fail(error, 'Envoi du code impossible. Réessayez dans un instant.');
+  }
+}
+
+/**
+ * Vérifie le code reçu par e-mail puis pose le nouveau mot de passe.
+ * Passe par le code à six chiffres plutôt que par le lien : un e-mail ouvert
+ * sur un ordinateur ne peut pas déclencher l'ouverture de l'app du téléphone.
+ */
+export async function confirmPasswordReset(
+  email: string,
+  token: string,
+  password: string,
+): Promise<User> {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: email.trim(),
+    token: token.replace(/\s/g, ''),
+    type: 'recovery',
+  });
+  if (error || !data.user) {
+    throw new Error(
+      /expired|invalid/i.test(error?.message ?? '')
+        ? 'Code incorrect ou expiré. Demandez-en un nouveau.'
+        : (error?.message ?? 'Vérification impossible.'),
+    );
+  }
+
+  const { error: update } = await supabase.auth.updateUser({ password });
+  if (update) fail(update, 'Ce mot de passe n’a pas pu être enregistré.');
+
+  return profileOf(data.user.id, data.user.email ?? undefined);
+}
+
+/**
  * Efface définitivement le compte et tout ce qui en dépend : annonces, photos,
  * favoris, conversations, messages et avis.
  *

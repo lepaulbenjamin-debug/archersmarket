@@ -12,6 +12,7 @@ interface AuthValue {
   signIn: (credentials: Credentials) => Promise<void>;
   signUp: (input: SignUpInput) => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string, token: string, password: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   updateProfile: (patch: Partial<User>) => Promise<void>;
   userById: (id: string) => User | undefined;
@@ -64,6 +65,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [refreshUsers],
   );
 
+  /** Fin de la réinitialisation : le nouveau mot de passe ouvre la session. */
+  const resetPassword = useCallback(
+    async (email: string, token: string, password: string) => {
+      setUser(await authService.confirmPasswordReset(email, token, password));
+      refreshUsers();
+    },
+    [refreshUsers],
+  );
+
   const signOut = useCallback(async () => {
     await authService.signOut();
     setUser(null);
@@ -91,8 +101,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo<AuthValue>(
-    () => ({ user, users, loading, signIn, signUp, signOut, deleteAccount, updateProfile, userById }),
-    [deleteAccount, loading, signIn, signOut, signUp, updateProfile, user, userById, users],
+    () => ({
+      user, users, loading, signIn, signUp, signOut, resetPassword,
+      deleteAccount, updateProfile, userById,
+    }),
+    [deleteAccount, loading, resetPassword, signIn, signOut, signUp, updateProfile, user, userById, users],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

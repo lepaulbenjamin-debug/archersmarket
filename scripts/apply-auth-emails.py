@@ -97,7 +97,7 @@ if len(sys.argv) > 1 and sys.argv[1] == "--smtp":
     payload.update(
         {
             "smtp_host": "smtp.resend.com",
-            "smtp_port": 465,
+            "smtp_port": "465",
             "smtp_user": "resend",
             "smtp_pass": api_key,
             "smtp_admin_email": sender,

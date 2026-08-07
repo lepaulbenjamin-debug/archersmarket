@@ -215,15 +215,6 @@ li {
   margin-top: 0;
 }
 
-.aremplir {
-  border: 2px dashed var(--orange);
-  border-radius: 14px;
-  padding: 18px 20px;
-  margin: 24px 0;
-  background: #fff8f2;
-  font-size: 14.5px;
-}
-
 footer {
   border-top: 1px solid var(--bord);
   background: var(--surface-alt);
@@ -252,8 +243,5 @@ footer {
     --orange-soft: #2a1a10;
     --orange-dark: #f5843c;
     --anthracite: #f7f7f8;
-  }
-  .aremplir {
-    background: #241a12;
   }
 }

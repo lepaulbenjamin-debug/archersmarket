@@ -106,7 +106,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
 
 /**
  * Vérifie le code reçu par e-mail puis pose le nouveau mot de passe.
- * Passe par le code à six chiffres plutôt que par le lien : un e-mail ouvert
+ * Passe par le code reçu par e-mail plutôt que par le lien : un e-mail ouvert
  * sur un ordinateur ne peut pas déclencher l'ouverture de l'app du téléphone.
  */
 export async function confirmPasswordReset(

@@ -29,7 +29,14 @@ Deno.serve(async (request) => {
         // volontiers deux fois le même événement.
         await db
           .from('orders')
-          .update({ status: 'paid', paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .update({
+            status: 'paid',
+            // Le virement au vendeur s'y rattachera : sans cette référence, il
+            // faudrait attendre le règlement bancaire pour pouvoir le lancer.
+            stripe_charge_id: intent.latest_charge ?? null,
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
           .eq('stripe_payment_intent_id', intent.id)
           .eq('status', 'pending');
 

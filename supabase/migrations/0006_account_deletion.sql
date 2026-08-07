@@ -5,12 +5,17 @@
 --
 -- Le client n'a pas le droit de toucher à auth.users ; cette fonction s'exécute
 -- avec les droits de son propriétaire et n'accepte qu'une cible, la personne
--- connectée. Tout le reste part en cascade depuis auth.users → profiles :
--- annonces, photos, favoris, conversations, messages, avis, jetons de
--- notification. Les fichiers du bucket, eux, n'ont pas de clé étrangère : ils
--- sont retirés explicitement.
+-- connectée — elle ne prend aucun paramètre, il n'y a donc rien à détourner.
+-- Tout le reste part en cascade depuis auth.users → profiles : annonces,
+-- photos, favoris, conversations, messages, avis, jetons de notification.
+--
+-- Les fichiers du bucket font exception : Supabase interdit désormais d'écrire
+-- directement dans storage.objects, même en security definer. L'app les retire
+-- par l'API Storage avant d'appeler cette fonction, avec les droits de la
+-- personne elle-même (règle listing_photos_delete, qui n'autorise que son
+-- propre dossier).
 
-create function delete_own_account() returns void
+create or replace function delete_own_account() returns void
 language plpgsql security definer set search_path = public as $$
 declare
   victim uuid := auth.uid();
@@ -18,10 +23,6 @@ begin
   if victim is null then
     raise exception 'Aucune session active' using errcode = '28000';
   end if;
-
-  delete from storage.objects
-  where bucket_id = 'listing-photos'
-    and (storage.foldername(name))[1] = victim::text;
 
   delete from auth.users where id = victim;
 end;

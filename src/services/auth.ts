@@ -1,4 +1,5 @@
 import { toUser, type ProfileRow } from '@/services/mappers';
+import { deleteAllPhotosOf } from '@/services/photos';
 import { fail, supabase } from '@/services/supabase';
 import type { User } from '@/types';
 
@@ -92,10 +93,17 @@ export async function signOut(): Promise<void> {
 
 /**
  * Efface définitivement le compte et tout ce qui en dépend : annonces, photos,
- * favoris, conversations, messages et avis. La base fait le travail — le client
- * n'a pas le droit de toucher aux comptes — puis la session est refermée.
+ * favoris, conversations, messages et avis.
+ *
+ * Les photos partent d'abord : le bucket ne se vide que par l'API Storage, et
+ * une fois le compte effacé plus aucune session n'aurait le droit d'y toucher —
+ * les fichiers resteraient accessibles à qui connaît leur adresse. En cas
+ * d'échec on s'arrête là, compte intact, plutôt que de laisser des photos
+ * orphelines derrière soi.
  */
-export async function deleteAccount(): Promise<void> {
+export async function deleteAccount(userId: string): Promise<void> {
+  await deleteAllPhotosOf(userId);
+
   const { error } = await supabase.rpc('delete_own_account');
   if (error) fail(error, 'Suppression du compte impossible.');
   await supabase.auth.signOut();

@@ -70,10 +70,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteAccount = useCallback(async () => {
-    await authService.deleteAccount();
+    if (!user) return;
+    await authService.deleteAccount(user.id);
     setUser(null);
     refreshUsers();
-  }, [refreshUsers]);
+  }, [refreshUsers, user]);
 
   const updateProfile = useCallback(
     async (patch: Partial<User>) => {

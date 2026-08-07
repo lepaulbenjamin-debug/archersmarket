@@ -126,9 +126,7 @@ const toOrder = (row: OrderRow): Order => ({
 });
 
 const ORDER_SELECT =
-  'id, listing_id, listing_title, buyer_id, seller_id, item_amount, shipping_amount,' +
-  ' protection_amount, total_amount, status, tracking_carrier, tracking_number,' +
-  ' paid_at, shipped_at, delivered_at, released_at, created_at';
+  'id, listing_id, listing_title, buyer_id, seller_id, item_amount, shipping_amount, protection_amount, total_amount, status, tracking_carrier, tracking_number, paid_at, shipped_at, delivered_at, released_at, created_at';
 
 /** Les commandes du membre connecté, achats et ventes confondus. */
 export async function fetchOrders(): Promise<Order[]> {

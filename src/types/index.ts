@@ -34,6 +34,8 @@ export interface User {
   rating: number;
   reviewCount: number;
   memberSince: string;
+  /** Ce membre a passé la vérification Stripe et peut encaisser. */
+  acceptsPayments: boolean;
 }
 
 export interface Listing {

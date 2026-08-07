@@ -1,0 +1,18 @@
+project_id = "uhflzqexpiyvtcyctqhn"
+
+# Les fonctions de paiement exigent un membre connecté : Supabase vérifie le
+# jeton avant même de les appeler.
+[functions.stripe-connect]
+verify_jwt = true
+
+[functions.stripe-checkout]
+verify_jwt = true
+
+# Stripe n'a pas de jeton Supabase. Cette fonction est donc ouverte, et c'est
+# la signature de l'événement qui l'authentifie — voir _shared/stripe.ts.
+[functions.stripe-webhook]
+verify_jwt = false
+
+# Balayage périodique, appelé par le planificateur avec la clé de service.
+[functions.stripe-release]
+verify_jwt = true

@@ -2,7 +2,17 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { BuyerPicker } from '@/components/BuyerPicker';
@@ -12,6 +22,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { Rating } from '@/components/Rating';
 import { ReviewList } from '@/components/ReviewList';
 import { Header, Screen } from '@/components/Screen';
+import { startSellerOnboarding } from '@/services/payments';
 import { fetchPendingReviews, fetchReviews } from '@/services/reviews';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
@@ -23,6 +34,32 @@ import type { ListingStatus, PendingReview, Review } from '@/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const [payLoading, setPayLoading] = useState(false);
+
+  /**
+   * Ouvre le formulaire d'identité hébergé par Stripe. Le lien est à usage
+   * unique et de courte durée : on en redemande un à chaque fois plutôt que
+   * d'en garder un périmé.
+   */
+  const openPaymentSetup = async () => {
+    setPayLoading(true);
+    try {
+      const { ready, url } = await startSellerOnboarding();
+      if (ready) {
+        Alert.alert(
+          'Tout est en règle',
+          'Votre identité est vérifiée. Vos acheteurs peuvent payer dans l’application, et vous touchez votre prix entier.',
+        );
+        return;
+      }
+      if (url) await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('Inscription impossible', (error as Error).message);
+    } finally {
+      setPayLoading(false);
+    }
+  };
+
   const { user, signOut } = useAuth();
   const { listingsBySeller, favoriteListings, setStatus, removeListing, isFavorite, toggleFavorite } =
     useListings();
@@ -184,6 +221,46 @@ export default function ProfileScreen() {
               thumbColor={colors.surface}
             />
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/orders')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="shield-check-outline" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Mes transactions</Text>
+              <Text style={styles.settingHint}>
+                Suivre vos achats et vos ventes réglés par paiement sécurisé.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={openPaymentSetup}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons
+              name={user.acceptsPayments ? 'bank-check' : 'bank-outline'}
+              size={19}
+              color={user.acceptsPayments ? colors.success : colors.text}
+            />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Recevoir des paiements</Text>
+              <Text style={styles.settingHint}>
+                {user.acceptsPayments
+                  ? 'Vos acheteurs peuvent payer dans l’application. Vous touchez votre prix entier.'
+                  : 'Vérifiez votre identité auprès de Stripe pour vendre en paiement sécurisé.'}
+              </Text>
+            </View>
+            {payLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+            )}
+          </Pressable>
 
           <Pressable
             accessibilityRole="button"

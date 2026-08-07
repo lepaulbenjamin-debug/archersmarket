@@ -56,6 +56,13 @@
           "color": "#F5843C",
           "defaultChannel": "default"
         }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.app.archersmarket.ios",
+          "enableGooglePay": false
+        }
       ]
     ],
     "experiments": {

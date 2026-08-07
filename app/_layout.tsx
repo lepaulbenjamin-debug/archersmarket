@@ -1,3 +1,4 @@
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
@@ -35,6 +36,8 @@ function RootNavigator() {
       <Stack.Screen name="seller/[id]" />
       <Stack.Screen name="review/[id]" />
       <Stack.Screen name="import" />
+      <Stack.Screen name="orders" />
+      <Stack.Screen name="order/[id]" />
       <Stack.Screen name="login" options={{ presentation: 'modal' }} />
       <Stack.Screen name="forgot-password" options={{ presentation: 'modal' }} />
       <Stack.Screen name="register" options={{ presentation: 'modal' }} />
@@ -50,8 +53,10 @@ export default function RootLayout() {
           <ListingsProvider>
             <MessagesProvider>
               <PushProvider>
-                <StatusBar style="dark" />
-                <RootNavigator />
+                <StripeProvider publishableKey={process.env.EXPO_PUBLIC_STRIPE_KEY ?? ''}>
+                  <StatusBar style="dark" />
+                  <RootNavigator />
+                </StripeProvider>
               </PushProvider>
             </MessagesProvider>
           </ListingsProvider>

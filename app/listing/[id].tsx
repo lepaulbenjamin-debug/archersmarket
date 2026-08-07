@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { BuyButton } from '@/components/BuyButton';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { ListingCard } from '@/components/ListingCard';
@@ -80,6 +81,9 @@ export default function ListingScreen() {
   const condition = conditionById(listing.condition);
   const discount = discountPercent(listing.price, listing.originalPrice);
   const isOwner = user?.id === listing.sellerId;
+  // Le paiement protégé n'apparaît que si le vendeur est en règle chez Stripe
+  // et si l'annonce voyage : une remise en main propre n'a rien à séquestrer.
+  const sellerPays = !!seller?.acceptsPayments && listing.shipping;
   const images = listing.images.length ? listing.images : [listing.category];
 
   const specs: Array<[string, string]> = [
@@ -299,13 +303,23 @@ export default function ListingScreen() {
               style={styles.footerButton}
             />
           ) : (
-            <Button
-              label={listing.status === 'sold' ? 'Article vendu' : 'Contacter le vendeur'}
-              icon="message-text-outline"
-              disabled={listing.status === 'sold'}
-              onPress={contactSeller}
-              style={styles.footerButton}
-            />
+            <>
+              <Button
+                label={listing.status === 'sold' ? 'Vendu' : 'Contacter'}
+                icon="message-text-outline"
+                variant="secondary"
+                disabled={listing.status === 'sold'}
+                onPress={contactSeller}
+                style={styles.footerButton}
+              />
+              {sellerPays ? (
+                <BuyButton
+                  listingId={listing.id}
+                  disabled={listing.status !== 'active'}
+                  style={styles.footerButton}
+                />
+              ) : null}
+            </>
           )}
         </View>
       </SafeAreaView>

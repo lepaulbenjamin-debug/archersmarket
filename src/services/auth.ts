@@ -15,7 +15,7 @@ export interface SignUpInput extends Credentials {
 }
 
 const PROFILE_SELECT =
-  'id, handle, name, city, club, bio, discipline, avatar_color, rating, review_count, created_at';
+  'id, handle, name, city, club, bio, discipline, avatar_color, rating, review_count, created_at, accepts_payments';
 
 const handleFrom = (name: string) =>
   name.trim().toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '_').slice(0, 18) || 'archer';

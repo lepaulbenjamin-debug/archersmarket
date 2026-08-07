@@ -42,3 +42,6 @@ yarn-error.*
 
 # Identifiants de signature (jamais versionnés)
 credentials/
+
+# Compilation ponctuelle pour les tests
+/build-pay/

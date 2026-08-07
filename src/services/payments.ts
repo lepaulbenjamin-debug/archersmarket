@@ -204,3 +204,67 @@ export async function fetchSellerAccount(): Promise<SellerAccount | null> {
 /** Un vendeur ne peut encaisser qu'une fois son identité vérifiée par Stripe. */
 export const canReceivePayments = (account: SellerAccount | null): boolean =>
   !!account?.chargesEnabled && !!account?.payoutsEnabled;
+
+// ---------------------------------------------------------------------------
+// Fonctions Edge
+//
+// Tout ce qui touche à l'argent vit côté serveur. L'app demande, elle ne
+// décide pas : ni les montants, ni les états, ni les virements.
+// ---------------------------------------------------------------------------
+
+/**
+ * Ouvre l'inscription du vendeur et retourne le lien du formulaire d'identité
+ * hébergé par Stripe.
+ */
+export async function startSellerOnboarding(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('stripe-connect');
+  if (error) fail(error, 'Inscription au paiement sécurisé impossible.');
+  const url = (data as { url?: string })?.url;
+  if (!url) throw new Error('Stripe n\u2019a pas renvoyé de lien.');
+  return url;
+}
+
+export interface Checkout {
+  orderId: string;
+  clientSecret: string;
+  breakdown?: PriceBreakdown;
+}
+
+/**
+ * Prépare le paiement d'une annonce. Les montants renvoyés font foi : ceux
+ * affichés avant l'achat ne sont qu'une estimation.
+ */
+export async function createCheckout(listingId: string): Promise<Checkout> {
+  const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+    body: { listingId },
+  });
+  if (error) fail(error, 'Paiement impossible pour le moment.');
+  const payload = data as { orderId?: string; clientSecret?: string; error?: string; breakdown?: PriceBreakdown };
+  if (payload?.error) throw new Error(payload.error);
+  if (!payload?.orderId || !payload?.clientSecret) {
+    throw new Error('Le paiement n\u2019a pas pu être préparé.');
+  }
+  return { orderId: payload.orderId, clientSecret: payload.clientSecret, breakdown: payload.breakdown };
+}
+
+/** Libellé français d'un état de commande, du point de vue demandé. */
+export function statusLabel(status: OrderStatus, side: 'buyer' | 'seller'): string {
+  switch (status) {
+    case 'pending':
+      return 'Paiement en attente';
+    case 'paid':
+      return side === 'seller' ? 'À expédier' : 'Payé, en attente d\u2019envoi';
+    case 'shipped':
+      return side === 'seller' ? 'Expédié' : 'En route';
+    case 'delivered':
+      return side === 'seller' ? 'Reçu, virement en cours' : 'Réception confirmée';
+    case 'released':
+      return side === 'seller' ? 'Virement effectué' : 'Terminé';
+    case 'refunded':
+      return 'Remboursé';
+    case 'cancelled':
+      return 'Annulé';
+    case 'disputed':
+      return 'Litige en cours';
+  }
+}

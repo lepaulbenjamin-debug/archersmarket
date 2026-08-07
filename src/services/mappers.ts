@@ -11,6 +11,7 @@ export interface ProfileRow {
   bio: string | null;
   discipline: string | null;
   avatar_color: string;
+  accepts_payments?: boolean;
   rating: number | string;
   review_count: number;
   created_at: string;
@@ -89,6 +90,7 @@ export function toUser(row: ProfileRow, email?: string): User {
     bio: row.bio ?? undefined,
     discipline: row.discipline ?? undefined,
     avatarColor: row.avatar_color,
+    acceptsPayments: !!row.accepts_payments,
     rating: num(row.rating) ?? 0,
     reviewCount: row.review_count,
     memberSince: row.created_at,

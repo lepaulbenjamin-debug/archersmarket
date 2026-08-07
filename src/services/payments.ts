@@ -216,9 +216,26 @@ export const canReceivePayments = (account: SellerAccount | null): boolean =>
  * Ouvre l'inscription du vendeur et retourne le lien du formulaire d'identité
  * hébergé par Stripe.
  */
+/**
+ * Une fonction Edge qui répond en erreur place son message dans le corps de
+ * la réponse, pas dans l'objet d'erreur. Sans cette lecture, « ce vendeur
+ * n'accepte pas encore le paiement sécurisé » deviendrait « une erreur est
+ * survenue », ce qui n'aide personne.
+ */
+async function edgeMessage(error: unknown, fallback: string): Promise<string> {
+  const response = (error as { context?: Response })?.context;
+  try {
+    const body = await response?.clone().json();
+    if (typeof body?.error === 'string') return body.error;
+  } catch {
+    // Corps illisible : on garde le message de repli.
+  }
+  return fallback;
+}
+
 export async function startSellerOnboarding(): Promise<string> {
   const { data, error } = await supabase.functions.invoke('stripe-connect');
-  if (error) fail(error, 'Inscription au paiement sécurisé impossible.');
+  if (error) throw new Error(await edgeMessage(error, 'Inscription au paiement sécurisé impossible.'));
   const url = (data as { url?: string })?.url;
   if (!url) throw new Error('Stripe n\u2019a pas renvoyé de lien.');
   return url;
@@ -238,7 +255,7 @@ export async function createCheckout(listingId: string): Promise<Checkout> {
   const { data, error } = await supabase.functions.invoke('stripe-checkout', {
     body: { listingId },
   });
-  if (error) fail(error, 'Paiement impossible pour le moment.');
+  if (error) throw new Error(await edgeMessage(error, 'Paiement impossible pour le moment.'));
   const payload = data as { orderId?: string; clientSecret?: string; error?: string; breakdown?: PriceBreakdown };
   if (payload?.error) throw new Error(payload.error);
   if (!payload?.orderId || !payload?.clientSecret) {

@@ -13,13 +13,18 @@
  * Le vendeur reçoit le prix de l'objet et les frais de port. La plateforme
  * garde la protection, sur laquelle Stripe prélève sa commission.
  */
-import { json, serviceClient } from '../_shared/context.ts';
+import { isScheduler, json, serviceClient } from '../_shared/context.ts';
 import { stripeRequest } from '../_shared/stripe.ts';
 
 /** Délai au-delà duquel un envoi sans nouvelle est réputé reçu. */
 const JOURS_AVANT_LIBERATION_AUTO = 14;
 
-Deno.serve(async () => {
+Deno.serve(async (request) => {
+  // verify_jwt ne prouve rien ici : il se contente d'accepter la clé
+  // publiable, embarquée dans chaque copie de l'application. Un balayage qui
+  // déplace de l'argent doit exiger mieux.
+  if (!isScheduler(request)) return json({ error: 'Réservé au planificateur.' }, 401);
+
   const db = serviceClient();
   const limite = new Date(Date.now() - JOURS_AVANT_LIBERATION_AUTO * 86_400_000).toISOString();
 

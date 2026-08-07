@@ -41,3 +41,18 @@ export async function callerId(request: Request): Promise<string | null> {
   const { data, error } = await client.auth.getUser(header.slice(7));
   return error ? null : (data.user?.id ?? null);
 }
+
+/**
+ * Réservé aux appels internes : la clé de service, jamais embarquée dans
+ * l'application. Comparaison à durée constante — une comparaison naïve laisse
+ * deviner la clé caractère par caractère.
+ */
+export function isScheduler(request: Request): boolean {
+  const header = request.headers.get('Authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const expected = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (!expected || token.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < token.length; i++) diff |= token.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}

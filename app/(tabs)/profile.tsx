@@ -184,6 +184,21 @@ export default function ProfileScreen() {
               thumbColor={colors.surface}
             />
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/account/blocked')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="account-cancel-outline" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Membres bloqués</Text>
+              <Text style={styles.settingHint}>
+                Rétablir le contact avec quelqu’un que vous aviez bloqué.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
         </View>
 
         <View style={styles.tabs}>
@@ -279,6 +294,14 @@ export default function ProfileScreen() {
           onPress={signOut}
           style={styles.signOut}
         />
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/account/delete')}
+          style={({ pressed }) => [styles.deleteRow, pressed && styles.pressed]}
+        >
+          <Text style={styles.deleteLabel}>Supprimer mon compte</Text>
+        </Pressable>
       </ScrollView>
 
       <BuyerPicker
@@ -422,7 +445,10 @@ const styles = StyleSheet.create({
   myListing: { gap: spacing.sm },
   actions: { flexDirection: 'row', gap: spacing.sm },
   actionButton: { flex: 1, paddingHorizontal: spacing.md },
+  settingDivider: { borderTopWidth: 1, borderTopColor: colors.border },
   signOut: { marginTop: spacing.sm },
+  deleteRow: { alignItems: 'center', paddingVertical: spacing.sm },
+  deleteLabel: { fontSize: 13, fontWeight: '600', color: colors.danger },
   registerLink: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
   registerText: { color: colors.textMuted, fontSize: 14 },
   registerAction: { color: colors.primary, fontSize: 14, fontWeight: '700' },

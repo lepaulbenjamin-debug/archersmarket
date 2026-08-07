@@ -90,6 +90,17 @@ export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
 }
 
+/**
+ * Efface définitivement le compte et tout ce qui en dépend : annonces, photos,
+ * favoris, conversations, messages et avis. La base fait le travail — le client
+ * n'a pas le droit de toucher aux comptes — puis la session est refermée.
+ */
+export async function deleteAccount(): Promise<void> {
+  const { error } = await supabase.rpc('delete_own_account');
+  if (error) fail(error, 'Suppression du compte impossible.');
+  await supabase.auth.signOut();
+}
+
 export async function updateProfile(userId: string, patch: Partial<User>): Promise<User> {
   const { error } = await supabase
     .from('profiles')

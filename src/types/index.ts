@@ -99,6 +99,15 @@ export interface Review {
   createdAt: string;
 }
 
+/** Membre dont l'utilisateur a coupé le contact. */
+export interface BlockedMember {
+  id: string;
+  name: string;
+  handle: string;
+  avatarColor: string;
+  blockedAt: string;
+}
+
 /** Vente conclue que l'utilisateur n'a pas encore notée. */
 export interface PendingReview {
   listingId: string;

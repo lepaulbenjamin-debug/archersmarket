@@ -1,13 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { EmptyState } from '@/components/EmptyState';
 import { ListingGrid } from '@/components/ListingGrid';
 import { Rating } from '@/components/Rating';
-import { ReportSheet } from '@/components/ReportSheet';
+import { MemberMenu } from '@/components/MemberMenu';
 import { ReviewList } from '@/components/ReviewList';
 import { Header, Screen } from '@/components/Screen';
 import { colors, radius, spacing } from '@/theme';
@@ -24,7 +24,6 @@ export default function SellerScreen() {
   const { listingsBySeller, isFavorite, toggleFavorite } = useListings();
 
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -56,19 +55,7 @@ export default function SellerScreen() {
       <Header
         title={seller.name}
         showBack
-        right={
-          currentUser && currentUser.id !== seller.id ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Signaler ce membre"
-              hitSlop={8}
-              onPress={() => setReporting(true)}
-              style={styles.reportButton}
-            >
-              <MaterialCommunityIcons name="flag-outline" size={18} color={colors.textMuted} />
-            </Pressable>
-          ) : undefined
-        }
+        right={<MemberMenu memberId={seller.id} memberName={seller.name} />}
       />
       <ListingGrid
         listings={listings}
@@ -113,13 +100,6 @@ export default function SellerScreen() {
         }
         empty={<EmptyState icon="tag-off-outline" title="Aucune annonce en ligne pour l’instant" />}
       />
-
-      <ReportSheet
-        visible={reporting}
-        onClose={() => setReporting(false)}
-        profileId={seller.id}
-        subject={seller.name}
-      />
     </Screen>
   );
 }
@@ -157,14 +137,6 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaLabel: { fontSize: 12.5, color: colors.textMuted },
-  reportButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
-  },
   reviews: { gap: spacing.sm },
   sectionTitle: {
     fontSize: 14,

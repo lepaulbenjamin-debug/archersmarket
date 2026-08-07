@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
+import { MemberMenu } from '@/components/MemberMenu';
 import { Header, Screen } from '@/components/Screen';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
@@ -104,7 +105,20 @@ export default function ChatScreen() {
 
   return (
     <Screen edges={['top']}>
-      <Header title={other?.name ?? 'Conversation'} subtitle={other?.city} showBack />
+      <Header
+        title={other?.name ?? 'Conversation'}
+        subtitle={other?.city}
+        showBack
+        right={
+          other ? (
+            <MemberMenu
+              memberId={other.id}
+              memberName={other.name}
+              onBlocked={() => router.replace('/(tabs)/messages')}
+            />
+          ) : undefined
+        }
+      />
 
       {listing ? (
         <Pressable

@@ -12,6 +12,7 @@ interface AuthValue {
   signIn: (credentials: Credentials) => Promise<void>;
   signUp: (input: SignUpInput) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   updateProfile: (patch: Partial<User>) => Promise<void>;
   userById: (id: string) => User | undefined;
 }
@@ -68,6 +69,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    await authService.deleteAccount();
+    setUser(null);
+    refreshUsers();
+  }, [refreshUsers]);
+
   const updateProfile = useCallback(
     async (patch: Partial<User>) => {
       if (!user) return;
@@ -83,8 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo<AuthValue>(
-    () => ({ user, users, loading, signIn, signUp, signOut, updateProfile, userById }),
-    [loading, signIn, signOut, signUp, updateProfile, user, userById, users],
+    () => ({ user, users, loading, signIn, signUp, signOut, deleteAccount, updateProfile, userById }),
+    [deleteAccount, loading, signIn, signOut, signUp, updateProfile, user, userById, users],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

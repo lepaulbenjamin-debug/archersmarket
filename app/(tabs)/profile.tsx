@@ -44,8 +44,15 @@ export default function ProfileScreen() {
   const openPaymentSetup = async () => {
     setPayLoading(true);
     try {
-      const url = await startSellerOnboarding();
-      await Linking.openURL(url);
+      const { ready, url } = await startSellerOnboarding();
+      if (ready) {
+        Alert.alert(
+          'Tout est en règle',
+          'Votre identité est vérifiée. Vos acheteurs peuvent payer dans l’application, et vous touchez votre prix entier.',
+        );
+        return;
+      }
+      if (url) await Linking.openURL(url);
     } catch (error) {
       Alert.alert('Inscription impossible', (error as Error).message);
     } finally {

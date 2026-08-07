@@ -233,12 +233,24 @@ async function edgeMessage(error: unknown, fallback: string): Promise<string> {
   return fallback;
 }
 
-export async function startSellerOnboarding(): Promise<string> {
+export interface OnboardingState {
+  /** Le vendeur est vérifié : il n'y a plus rien à remplir. */
+  ready: boolean;
+  /** Formulaire d'identité à ouvrir, absent quand tout est en règle. */
+  url?: string;
+}
+
+/**
+ * Ouvre ou reprend l'inscription du vendeur. L'appel rafraîchit aussi son
+ * état chez Stripe : les comptes créés en API v2 n'émettent pas d'événement
+ * vers le webhook, il faut donc aller le chercher.
+ */
+export async function startSellerOnboarding(): Promise<OnboardingState> {
   const { data, error } = await supabase.functions.invoke('stripe-connect');
   if (error) throw new Error(await edgeMessage(error, 'Inscription au paiement sécurisé impossible.'));
-  const url = (data as { url?: string })?.url;
-  if (!url) throw new Error('Stripe n\u2019a pas renvoyé de lien.');
-  return url;
+  const payload = data as { ready?: boolean; url?: string };
+  if (!payload?.ready && !payload?.url) throw new Error('Stripe n\u2019a pas renvoyé de lien.');
+  return { ready: !!payload.ready, url: payload.url };
 }
 
 export interface Checkout {

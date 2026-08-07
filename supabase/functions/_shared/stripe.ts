@@ -63,6 +63,46 @@ export async function stripeRequest<T = Record<string, unknown>>(
 }
 
 /**
+ * L'API v2, en JSON.
+ *
+ * Stripe refuse désormais /v1/accounts à toute nouvelle plateforme : la
+ * création de comptes connectés passe obligatoirement par /v2/core/accounts,
+ * qui exige une version d'API explicite. Elle est épinglée ici — une version
+ * qui bouge sous les pieds d'un système de paiement, c'est une panne un matin
+ * sans prévenir.
+ */
+export const STRIPE_V2_VERSION = '2025-11-17.preview';
+
+export async function stripeV2Request<T = Record<string, unknown>>(
+  method: 'GET' | 'POST',
+  path: string,
+  body?: Record<string, unknown>,
+  options: StripeOptions = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${stripeKey()}`,
+    'Content-Type': 'application/json',
+    'Stripe-Version': STRIPE_V2_VERSION,
+  };
+  if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
+
+  const response = await fetch(`https://api.stripe.com/v2${path}`, {
+    method,
+    headers,
+    body: method === 'POST' && body ? JSON.stringify(body) : undefined,
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    // La v2 détaille ses refus champ par champ : ce message-là est utile,
+    // celui du niveau supérieur ne l'est pas.
+    const invalid = payload?.error?.invalid_fields?.[0]?.message;
+    throw new Error(invalid ?? payload?.error?.message ?? `Stripe a répondu ${response.status}.`);
+  }
+  return payload as T;
+}
+
+/**
  * Vérifie la signature d'un événement Stripe.
  *
  * Sans cette vérification, n'importe qui pourrait annoncer un paiement reçu

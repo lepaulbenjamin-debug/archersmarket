@@ -87,6 +87,12 @@ Deno.serve(async (request) => {
           dashboard: 'express',
           defaults: {
             currency: 'eur',
+            // Le site qui présente les objets, c'est le nôtre. Sans cette
+            // valeur, Stripe ouvre un écran « Informations sur votre
+            // entreprise » et réclame une adresse web au vendeur — question
+            // absurde posée à un particulier qui revend son arc, et premier
+            // motif d'abandon de l'inscription.
+            profile: { business_url: 'https://archersmarket.fr' },
             responsibilities: { fees_collector: 'application', losses_collector: 'application' },
           },
           metadata: { archers_market_user: userId },

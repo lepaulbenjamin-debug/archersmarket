@@ -16,7 +16,7 @@ interface AuthValue {
   deleteAccount: () => Promise<void>;
   updateProfile: (patch: Partial<User>) => Promise<void>;
   /** Relit le profil connecté : sa capacité à encaisser peut changer côté Stripe. */
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
   userById: (id: string) => User | undefined;
 }
 
@@ -79,6 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = useCallback(async () => {
     const restored = await authService.restoreSession().catch(() => null);
     if (restored) setUser(restored);
+    return restored;
   }, []);
 
   const signOut = useCallback(async () => {

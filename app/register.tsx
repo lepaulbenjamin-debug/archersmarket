@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { SocialSignIn } from '@/components/SocialSignIn';
+
 import { Field } from '@/components/Field';
 import { Header, Screen } from '@/components/Screen';
 import { colors, spacing } from '@/theme';
@@ -18,7 +20,7 @@ import { useAuth } from '@/store/AuthContext';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, refreshUser } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +47,23 @@ export default function RegisterScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+
+  /**
+   * Après une connexion tierce, le profil peut être incomplet : Google ne
+   * donne pas la ville, et Apple permet de masquer son nom. On termine
+   * l'inscription plutôt que de laisser l'utilisateur buter dessus au
+   * moment de publier.
+   */
+  const afterSocial = async (fullName?: string) => {
+    const profil = await refreshUser();
+    const incomplet = !profil?.city?.trim() || !profil?.name || profil.name === 'Archer';
+    if (incomplet) {
+      router.replace({ pathname: '/account/setup', params: fullName ? { suggested: fullName } : {} });
+      return;
+    }
+    router.canGoBack() ? router.back() : router.replace('/');
   };
 
   return (
@@ -98,6 +117,11 @@ export default function RegisterScreen() {
           />
 
           <Button label="Créer mon compte" onPress={submit} loading={loading} />
+
+          <SocialSignIn
+            onDone={afterSocial}
+            onError={(message) => setErrors({ email: message })}
+          />
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Déjà inscrit ?</Text>

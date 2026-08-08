@@ -28,15 +28,16 @@
       <p class="chapo">
         Ce que l’application collecte, pourquoi, où c’est hébergé et comment tout effacer.
       </p>
-      <p class="maj">Dernière mise à jour : 7 août 2026</p>
+      <p class="maj">Dernière mise à jour : 8 août 2026</p>
 
       <div class="encart">
         <p>
           <strong>L’essentiel.</strong> Archers Market ne vend rien à personne, n’affiche aucune
           publicité et n’embarque aucun traceur publicitaire ni outil de mesure d’audience. Les
           données collectées servent uniquement à faire fonctionner le marché : publier une annonce,
-          échanger, noter une transaction. Vous pouvez tout effacer depuis l’application, en deux
-          écrans.
+          échanger, payer, noter une transaction. Vous pouvez tout effacer depuis l’application, en
+          deux écrans — à l’exception des traces comptables d’une vente réglée, que la loi nous
+          oblige à conserver, et dont votre nom est retiré.
         </p>
       </div>
 
@@ -118,6 +119,25 @@
             <td>Vous prévenir d’un message, d’une offre ou d’un avis reçu</td>
             <td>Consentement, retirable à tout moment</td>
           </tr>
+          <tr>
+            <td>
+              Commandes payées dans l’application : montants, dates, numéro de suivi, référence du
+              paiement chez Stripe, titre de l’annonce concernée
+            </td>
+            <td>
+              Conserver les fonds jusqu’à la réception, payer le vendeur, trancher un litige, et
+              tenir la comptabilité
+            </td>
+            <td>Exécution du contrat, puis obligation légale</td>
+          </tr>
+          <tr>
+            <td>
+              Pour les vendeurs qui encaissent : identifiant de leur compte Stripe et état de leur
+              vérification
+            </td>
+            <td>Savoir à qui l’argent peut être versé</td>
+            <td>Exécution du contrat</td>
+          </tr>
         </tbody>
       </table>
 
@@ -130,8 +150,14 @@
           profilage.
         </li>
         <li>
-          Aucune donnée bancaire : les paiements se règlent directement entre membres, hors de
-          l’application.
+          <strong>Aucune coordonnée bancaire.</strong> Le numéro de carte de l’acheteur et l’IBAN du
+          vendeur sont saisis dans des formulaires fournis par Stripe et vont directement chez lui.
+          Ils ne transitent pas par nos serveurs et nous ne les voyons jamais. Nous ne conservons
+          que des références de paiement, qui ne permettent aucun prélèvement.
+        </li>
+        <li>
+          Aucune pièce d’identité. Les justificatifs demandés aux vendeurs pour encaisser sont
+          transmis à Stripe seul.
         </li>
         <li>
           L’accès à vos photos ne sert qu’à celles que vous choisissez vous-même pour illustrer une
@@ -161,6 +187,17 @@
             <td>Supabase</td>
             <td>Hébergement de la base et des photos, gestion des comptes</td>
             <td>L’ensemble des données du service</td>
+          </tr>
+          <tr>
+            <td>Stripe</td>
+            <td>
+              Encaissement, conservation des fonds, virements aux vendeurs et vérification de leur
+              identité
+            </td>
+            <td>
+              Les coordonnées bancaires, les justificatifs d’identité des vendeurs et le détail des
+              transactions
+            </td>
           </tr>
           <tr>
             <td>Resend</td>
@@ -194,6 +231,13 @@
           <strong>À la suppression du compte</strong> : tout est effacé immédiatement et
           définitivement, y compris les photos, les messages et les avis que vous avez déposés. La
           note des personnes que vous aviez notées est recalculée sans eux.
+        </li>
+        <li>
+          <strong>Dix ans pour les ventes réglées dans l’application</strong> : montants, dates et
+          références de paiement sont conservés, comme l’impose la réglementation comptable. Ces
+          lignes sont <strong>détachées de votre compte</strong> à sa suppression — elles ne portent
+          plus ni votre nom, ni votre adresse e-mail, ni aucun lien vers votre profil. Stripe
+          conserve de son côté le détail des transactions, selon ses propres obligations.
         </li>
         <li>
           <strong>Compte inutilisé</strong> : un compte resté inactif trois ans est supprimé, après
@@ -238,7 +282,9 @@
         </li>
         <li>
           <strong>Effacer</strong> : Compte → Supprimer mon compte. C’est immédiat et ne demande
-          aucune démarche auprès de nous.
+          aucune démarche auprès de nous. Deux réserves : la suppression est refusée tant qu’une
+          vente est en cours — le virement n’aurait plus de destinataire et l’acheteur perdrait son
+          recours — et les traces comptables décrites plus haut subsistent, sans votre nom.
         </li>
         <li>
           <strong>Accéder à vos données ou en obtenir une copie</strong> : écrivez à

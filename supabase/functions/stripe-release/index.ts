@@ -31,14 +31,14 @@ Deno.serve(async (request) => {
   try {
     const { data: confirmees } = await db
       .from('orders')
-      .select('id, seller_id, item_amount, shipping_amount, stripe_payment_intent_id')
+      .select('id, seller_id, item_amount, shipping_amount, stripe_charge_id')
       .eq('status', 'delivered')
       .is('stripe_transfer_id', null)
       .limit(100);
 
     const { data: silencieuses } = await db
       .from('orders')
-      .select('id, seller_id, item_amount, shipping_amount, stripe_payment_intent_id')
+      .select('id, seller_id, item_amount, shipping_amount, stripe_charge_id')
       .eq('status', 'shipped')
       .is('stripe_transfer_id', null)
       .lt('shipped_at', limite)
@@ -71,6 +71,11 @@ Deno.serve(async (request) => {
             currency: 'eur',
             destination: seller.stripe_account_id,
             transfer_group: order.id,
+            // Rattaché à l'encaissement d'origine : le virement part sans
+            // attendre que les fonds soient devenus disponibles, ce qui prend
+            // une semaine au démarrage. L'acheteur, lui, confirme sa réception
+            // en deux jours.
+            source_transaction: order.stripe_charge_id ?? undefined,
             metadata: { order_id: order.id },
           },
           // La clé d'idempotence est la commande : un balayage rejoué ne peut

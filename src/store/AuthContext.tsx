@@ -15,6 +15,8 @@ interface AuthValue {
   resetPassword: (email: string, token: string, password: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   updateProfile: (patch: Partial<User>) => Promise<void>;
+  /** Relit le profil connecté : sa capacité à encaisser peut changer côté Stripe. */
+  refreshUser: () => Promise<void>;
   userById: (id: string) => User | undefined;
 }
 
@@ -74,6 +76,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [refreshUsers],
   );
 
+  const refreshUser = useCallback(async () => {
+    const restored = await authService.restoreSession().catch(() => null);
+    if (restored) setUser(restored);
+  }, []);
+
   const signOut = useCallback(async () => {
     await authService.signOut();
     setUser(null);
@@ -103,9 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthValue>(
     () => ({
       user, users, loading, signIn, signUp, signOut, resetPassword,
-      deleteAccount, updateProfile, userById,
+      deleteAccount, updateProfile, refreshUser, userById,
     }),
-    [deleteAccount, loading, resetPassword, signIn, signOut, signUp, updateProfile, user, userById, users],
+    [deleteAccount, loading, refreshUser, resetPassword, signIn, signOut, signUp, updateProfile, user, userById, users],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

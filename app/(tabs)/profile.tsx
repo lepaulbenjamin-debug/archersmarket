@@ -22,7 +22,6 @@ import { ListingCard } from '@/components/ListingCard';
 import { Rating } from '@/components/Rating';
 import { ReviewList } from '@/components/ReviewList';
 import { Header, Screen } from '@/components/Screen';
-import { startSellerOnboarding } from '@/services/payments';
 import { fetchPendingReviews, fetchReviews } from '@/services/reviews';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
@@ -34,31 +33,7 @@ import type { ListingStatus, PendingReview, Review } from '@/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [payLoading, setPayLoading] = useState(false);
 
-  /**
-   * Ouvre le formulaire d'identité hébergé par Stripe. Le lien est à usage
-   * unique et de courte durée : on en redemande un à chaque fois plutôt que
-   * d'en garder un périmé.
-   */
-  const openPaymentSetup = async () => {
-    setPayLoading(true);
-    try {
-      const { ready, url } = await startSellerOnboarding();
-      if (ready) {
-        Alert.alert(
-          'Tout est en règle',
-          'Votre identité est vérifiée. Vos acheteurs peuvent payer dans l’application, et vous touchez votre prix entier.',
-        );
-        return;
-      }
-      if (url) await Linking.openURL(url);
-    } catch (error) {
-      Alert.alert('Inscription impossible', (error as Error).message);
-    } finally {
-      setPayLoading(false);
-    }
-  };
 
   const { user, signOut } = useAuth();
   const { listingsBySeller, favoriteListings, setStatus, removeListing, isFavorite, toggleFavorite } =
@@ -239,7 +214,7 @@ export default function ProfileScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={openPaymentSetup}
+            onPress={() => router.push('/account/payment')}
             style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
           >
             <MaterialCommunityIcons
@@ -255,11 +230,7 @@ export default function ProfileScreen() {
                   : 'Vérifiez votre identité auprès de Stripe pour vendre en paiement sécurisé.'}
               </Text>
             </View>
-            {payLoading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
-            )}
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
           </Pressable>
 
           <Pressable

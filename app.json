@@ -60,7 +60,6 @@
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.app.archersmarket.ios",
           "enableGooglePay": false
         }
       ]

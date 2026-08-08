@@ -2,6 +2,11 @@
 
 export type CategoryId =
   | 'bow-recurve'
+  | 'riser'
+  | 'limbs'
+  | 'rest'
+  | 'arrow-parts'
+  | 'tools'
   | 'bow-compound'
   | 'bow-longbow'
   | 'arrows'

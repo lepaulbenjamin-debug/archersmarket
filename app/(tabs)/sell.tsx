@@ -15,12 +15,13 @@ import {
   View,
 } from 'react-native';
 
+import { BrandPicker } from '@/components/BrandPicker';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { Field } from '@/components/Field';
 import { Header, Screen } from '@/components/Screen';
-import { brands, categories, categoryById, conditions, handednessOptions } from '@/data/catalog';
+import { categories, categoryById, conditions, handednessOptions } from '@/data/catalog';
 import { consumeImportDraft } from '@/services/importListing';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
@@ -283,11 +284,7 @@ export default function SellScreen() {
           </Group>
 
           <Group title="Marque">
-            <View style={styles.wrap}>
-              {brands.map((item) => (
-                <Chip key={item} label={item} selected={brand === item} onPress={() => setBrand(item)} />
-              ))}
-            </View>
+            <BrandPicker value={brand} onChange={setBrand} />
           </Group>
 
           <Group title="État">

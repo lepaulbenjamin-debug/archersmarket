@@ -124,10 +124,17 @@ function findAd(node: unknown, depth = 0): RawAd | null {
 // ---------------------------------------------------------------------------
 
 const CATEGORY_HINTS: Array<{ id: CategoryId; patterns: RegExp }> = [
+  // Les pièces détachées passent avant l'arc complet : « branches Uukha »
+  // doit tomber sur branches, pas sur arc classique.
+  { id: 'limbs', patterns: /\b(branches?|limbs?)\b/g },
+  { id: 'riser', patterns: /\b(poignees?|riser|handle)\b/g },
+  { id: 'rest', patterns: /\b(repose-?fleche|arrow ?rest|berger|button|palpeur|plunger)\b/g },
+  { id: 'arrow-parts', patterns: /\b(pointes?|plumes?|empennages?|encoches?|nocks?|inserts?|spin-?wings?|vanes?)\b/g },
+  { id: 'tools', patterns: /\b(presse a arc|bow press|coupe-?tubes?|controleur d'allonge|balance|equerre|niveau|gabarit|serre-?joint)\b/g },
   { id: 'bow-compound', patterns: /\b(poulies?|compound|modules?|cames?)\b/g },
   { id: 'bow-longbow', patterns: /\b(longbow|traditionnel|arc droit|flatbow)\b/g },
-  { id: 'arrows', patterns: /\b(fleches?|tubes?|spine|empennage|plumes?|pointes?)\b/g },
-  { id: 'sight', patterns: /\b(viseur|scope|berger|button|palpeur|dioptrie)\b/g },
+  { id: 'arrows', patterns: /\b(fleches?|tubes?|spine)\b/g },
+  { id: 'sight', patterns: /\b(viseurs?|scopes?|dioptries?|lentilles?)\b/g },
   { id: 'stabilizer', patterns: /\b(stabilisation|stabilisateur|v-?bar|amortisseur)\b/g },
   { id: 'release', patterns: /\b(decocheur|palette|onglet|gant de tir)\b/g },
   { id: 'quiver', patterns: /\b(carquois)\b/g },
@@ -135,8 +142,40 @@ const CATEGORY_HINTS: Array<{ id: CategoryId; patterns: RegExp }> = [
   { id: 'string', patterns: /\b(corde|tranche-?fil|serving|dacron|bcy|fastflight)\b/g },
   { id: 'target', patterns: /\b(cible|blason|mousse|trepied|butte)\b/g },
   { id: 'apparel', patterns: /\b(housse|valise|sac de tir|tee-?shirt|veste)\b/g },
-  { id: 'bow-recurve', patterns: /\b(classique|recurve|branches?|poignee|riser|arc)\b/g },
+  { id: 'bow-recurve', patterns: /\b(arc complet|ensemble complet|classique|recurve|arc)\b/g },
 ];
+
+/**
+ * Abréviations employées dans les annonces. Un vendeur écrit « branches SF »
+ * ou « poignée W&W », jamais « SF Archery » : sans ces alias, la marque
+ * retombe sur « Autre » alors qu'elle est parfaitement identifiable.
+ */
+const BRAND_ALIASES: Record<string, string> = {
+  sf: 'SF Archery',
+  'sebastien flute': 'SF Archery',
+  'w&w': 'Win&Win',
+  ww: 'Win&Win',
+  wiawis: 'Win&Win',
+  mk: 'MK Korea',
+  wns: 'WNS',
+  bcy: 'BCY',
+  aae: 'AAE',
+  cbe: 'CBE',
+  hha: 'HHA',
+  qad: 'QAD',
+  'bee stinger': 'Bee Stinger',
+  bstinger: 'Bee Stinger',
+  'b-stinger': 'Bee Stinger',
+  'carbon express': 'Carbon Express',
+  'gold tip': 'Gold Tip',
+  'spot hogg': 'Spot Hogg',
+  'sure loc': 'Sure-Loc',
+  'sureloc': 'Sure-Loc',
+  'arc systeme': 'Arc Systeme',
+  'arc système': 'Arc Systeme',
+  bear: 'Bear Archery',
+  core: 'Core Archery',
+};
 
 /** Marques ne fabriquant qu'un type d'arc : indice fort quand le texte est avare. */
 const BRAND_CATEGORY: Record<string, CategoryId> = {
@@ -153,6 +192,23 @@ const BRAND_CATEGORY: Record<string, CategoryId> = {
   Victory: 'arrows',
   Shibuya: 'sight',
   Axcel: 'sight',
+  'Sure-Loc': 'sight',
+  'Gold Tip': 'arrows',
+  'Carbon Express': 'arrows',
+  'Black Eagle': 'arrows',
+  Bohning: 'arrow-parts',
+  Doinker: 'stabilizer',
+  'Bee Stinger': 'stabilizer',
+  Carter: 'release',
+  Scott: 'release',
+  TruBall: 'release',
+  Hamskea: 'rest',
+  QAD: 'rest',
+  BCY: 'string',
+  Angel: 'string',
+  Brownell: 'string',
+  Bowtech: 'bow-compound',
+  Prime: 'bow-compound',
 };
 
 // L'ordre compte : « comme neuf » doit être reconnu avant « neuf ».
@@ -178,9 +234,18 @@ export function parseArchery(
   const guessed: Array<keyof NewListingInput> = [];
   const result: Partial<NewListingInput> = {};
 
-  const brandFound = brands.find(
-    (name) => name !== 'Autre' && new RegExp(`\\b${normalize(name).replace(/[&+]/g, '.')}\\b`).test(text),
-  );
+  // Le nom complet d'abord, l'abréviation ensuite : « Bear Archery » doit
+  // l'emporter sur l'alias « bear », qui est plus large.
+  const corpus = `${title} ${text}`;
+  const brandFound =
+    brands.find(
+      (name) =>
+        name !== 'Autre' &&
+        new RegExp(`\\b${normalize(name).replace(/[&+]/g, '.')}\\b`).test(corpus),
+    ) ??
+    Object.entries(BRAND_ALIASES).find(([alias]) =>
+      new RegExp(`\\b${normalize(alias).replace(/[&+]/g, '.')}\\b`).test(corpus),
+    )?.[1];
 
   // Le titre pèse plus lourd que le corps : c'est là qu'on nomme l'objet.
   const scores = CATEGORY_HINTS.map((hint) => {

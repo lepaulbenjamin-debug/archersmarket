@@ -21,6 +21,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { Rating } from '@/components/Rating';
 import { ReportSheet } from '@/components/ReportSheet';
 import { Screen } from '@/components/Screen';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { categoryById, conditionById, handednessLabel } from '@/data/catalog';
 import { parcelLabel } from '@/services/shipping';
 import { colors, radius, spacing } from '@/theme';
@@ -250,6 +251,7 @@ export default function ListingScreen() {
                   <Text style={styles.sellerName}>{seller.name}</Text>
                   <Rating value={seller.rating} count={seller.reviewCount} size={13} />
                   {seller.club ? <Text style={styles.sellerClub}>{seller.club}</Text> : null}
+                  {seller.acceptsPayments ? <VerifiedBadge compact /> : null}
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textFaint} />
               </Pressable>

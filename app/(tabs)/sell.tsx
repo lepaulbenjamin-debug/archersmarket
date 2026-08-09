@@ -192,7 +192,18 @@ export default function SellScreen() {
       setErrors({});
       router.push(`/listing/${listing.id}`);
     } catch (error) {
-      Alert.alert('Publication impossible', (error as Error).message);
+      const message = (error as Error).message;
+      // Le plafond des comptes récents se lève en vérifiant son identité.
+      // Annoncer la sortie sans y mener laisserait le vendeur devant une
+      // porte close avec la clé dans la poche.
+      if (/rifiez votre identit/.test(message)) {
+        Alert.alert('Plafond atteint pour aujourd’hui', message, [
+          { text: 'Plus tard', style: 'cancel' },
+          { text: 'Vérifier mon identité', onPress: () => router.push('/account/payment') },
+        ]);
+      } else {
+        Alert.alert('Publication impossible', message);
+      }
     } finally {
       setSubmitting(false);
     }

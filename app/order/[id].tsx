@@ -9,7 +9,9 @@ import { Field } from '@/components/Field';
 import { PaymentBadge } from '@/components/PaymentBadge';
 import { Header, Screen } from '@/components/Screen';
 import {
+  confirmHandover,
   confirmReceived,
+  fetchHandoverCode,
   fetchOrder,
   formatCents,
   markShipped,
@@ -48,6 +50,11 @@ export default function OrderScreen() {
   // On ne le demande qu'à ce moment-là : l'acheteur ne peut pas le choisir,
   // il ne sait pas d'où part le paquet.
   const [dropoffs, setDropoffs] = useState<RelayPoint[] | null>(null);
+  // Le code de remise : l'acheteur le lit, le vendeur le saisit. Jamais
+  // l'inverse — sinon le vendeur pourrait solder la vente sans avoir sorti
+  // l'arc du coffre.
+  const [handoverCode, setHandoverCode] = useState<string | null>(null);
+  const [codeSaisi, setCodeSaisi] = useState('');
   const [carrier, setCarrier] = useState('');
   const [tracking, setTracking] = useState('');
 
@@ -56,6 +63,11 @@ export default function OrderScreen() {
       const [commande, expedition] = await Promise.all([fetchOrder(id), fetchShipment(id)]);
       setOrder(commande);
       setShipment(expedition);
+      if (commande?.paymentMode === 'direct' && commande.status === 'paid') {
+        // Échoue silencieusement côté vendeur : c'est voulu, le code ne lui
+        // est pas destiné.
+        setHandoverCode(await fetchHandoverCode(commande.id).catch(() => null));
+      }
     } catch (error) {
       Alert.alert('Commande indisponible', (error as Error).message);
     } finally {
@@ -241,10 +253,23 @@ export default function OrderScreen() {
             <Ligne label="Protection acheteur" value={formatCents(order.protectionAmount)} />
           ) : null}
           <View style={styles.separateur} />
+          {order.paymentMode === 'direct' ? (
+            <Text style={styles.aide}>
+              Le prix de l’arc se règle sur place. Nous n’encaissons que la mise en relation.
+            </Text>
+          ) : null}
           <Ligne
-            label={side === 'buyer' ? 'Total payé' : 'Vous recevez'}
+            label={
+              order.paymentMode === 'direct'
+                ? 'Réglé à Archers Market'
+                : side === 'buyer'
+                  ? 'Total payé'
+                  : 'Vous recevez'
+            }
             value={formatCents(
-              side === 'buyer'
+              order.paymentMode === 'direct'
+                ? order.totalAmount
+                : side === 'buyer'
                 ? order.totalAmount
                 : // Le port ne revient au vendeur que s'il expédie par ses
                   // propres moyens : quand la plateforme achète l'étiquette,
@@ -277,8 +302,52 @@ export default function OrderScreen() {
           </View>
         ) : null}
 
+        {/* Remise en main propre : le code fait foi */}
+        {order.paymentMode === 'direct' && order.status === 'paid' ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Remise en main propre</Text>
+            {side === 'buyer' ? (
+              <>
+                <Text style={styles.aide}>
+                  Essayez l’arc, puis réglez le vendeur directement. Ne donnez ce code qu’une
+                  fois l’arc entre vos mains : c’est lui qui clôt la vente.
+                </Text>
+                <Text style={styles.code}>{handoverCode ?? '••••'}</Text>
+                <Text style={styles.aide}>
+                  Nous n’avons pas encaissé le prix de l’arc et ne pourrons donc rien vous
+                  rembourser. En cas de problème, signalez-le-nous depuis la conversation.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.aide}>
+                  L’acheteur vous donnera un code à quatre chiffres une fois l’arc essayé et
+                  réglé. Saisissez-le pour clore la vente.
+                </Text>
+                <Field
+                  label="Code de remise"
+                  placeholder="1234"
+                  value={codeSaisi}
+                  onChangeText={setCodeSaisi}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+                <Button
+                  label="Confirmer la remise"
+                  icon="handshake-outline"
+                  onPress={() =>
+                    run(() => confirmHandover(order.id, codeSaisi), 'Confirmation impossible')
+                  }
+                  loading={busy}
+                  disabled={codeSaisi.trim().length < 4}
+                />
+              </>
+            )}
+          </View>
+        ) : null}
+
         {/* Actions du vendeur */}
-        {side === 'seller' && order.status === 'paid' ? (
+        {side === 'seller' && order.paymentMode === 'escrow' && order.status === 'paid' ? (
           order.shippingMode !== 'hand' ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Expédier</Text>
@@ -375,7 +444,8 @@ export default function OrderScreen() {
         ) : null}
 
         {/* Actions de l'acheteur */}
-        {side === 'buyer' && (order.status === 'paid' || order.status === 'shipped') ? (
+        {side === 'buyer' && order.paymentMode === 'escrow'
+          && (order.status === 'paid' || order.status === 'shipped') ? (
           <>
             <Button
               label="J’ai bien reçu l’article"
@@ -480,6 +550,14 @@ const styles = StyleSheet.create({
   ligneFort: { fontSize: 15.5, fontWeight: '800', color: colors.text },
   separateur: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
   suivi: { fontSize: 14, color: colors.text, fontWeight: '600' },
+  code: {
+    fontSize: 40,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: 10,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
   probleme: { fontSize: 13, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.xs },
   litige: {
     flexDirection: 'row',

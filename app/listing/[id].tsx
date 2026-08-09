@@ -82,9 +82,11 @@ export default function ListingScreen() {
   const condition = conditionById(listing.condition);
   const discount = discountPercent(listing.price, listing.originalPrice);
   const isOwner = user?.id === listing.sellerId;
-  // Le paiement protégé n'apparaît que si le vendeur est en règle chez Stripe
-  // et si l'annonce voyage : une remise en main propre n'a rien à séquestrer.
-  const sellerPays = !!seller?.acceptsPayments && listing.shipping;
+  // L'achat est toujours proposé : à défaut de paiement séquestré, la remise
+  // vérifiée fonctionne avec n'importe quel vendeur, sans qu'il ait eu à
+  // passer la vérification d'identité. C'était la barrière qui empêchait la
+  // plupart des ventes locales.
+  const sellerPays = !isOwner && listing.status === 'active';
   const images = listing.images.length ? listing.images : [listing.category];
 
   const specs: Array<[string, string]> = [

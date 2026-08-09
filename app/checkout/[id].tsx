@@ -10,7 +10,9 @@ import {
 import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { Header, Screen } from '@/components/Screen';
-import { createCheckout, formatCents, priceBreakdown, toCents } from '@/services/payments';
+import {
+  createCheckout, formatCents, handoverBreakdown, priceBreakdown, toCents,
+} from '@/services/payments';
 import {
   fetchOffers, fetchRelayPoints, needsRelay,
   type Civility, type DeliveryAddress, type RelayPoint, type ShippingOffer,
@@ -31,11 +33,17 @@ import { colors, radius, spacing } from '@/theme';
 export default function CheckoutScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, userById } = useAuth();
   const { listings } = useListings();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const listing = useMemo(() => listings.find((item) => item.id === id), [listings, id]);
+  const seller = listing ? userById(listing.sellerId) : undefined;
+
+  // Le paiement séquestré suppose un vendeur vérifié chez Stripe : sans cela,
+  // l'argent encaissé n'aurait nulle part où aller. La remise, elle, reste
+  // toujours possible.
+  const escrowPossible = !!seller?.acceptsPayments && !!listing?.shipping;
 
   const [address, setAddress] = useState<DeliveryAddress>({
     civility: 'M',
@@ -50,7 +58,7 @@ export default function CheckoutScreen() {
   const [offer, setOffer] = useState<ShippingOffer | null>(null);
   const [points, setPoints] = useState<RelayPoint[] | null>(null);
   const [point, setPoint] = useState<RelayPoint | null>(null);
-  const [handDelivery, setHandDelivery] = useState(!listing?.shipping);
+  const [handDelivery, setHandDelivery] = useState(true);
   const [busy, setBusy] = useState<'offers' | 'points' | 'pay' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +110,11 @@ export default function CheckoutScreen() {
 
   const estimation = useMemo(() => {
     if (!listing) return null;
-    return priceBreakdown(toCents(listing.price), handDelivery ? 0 : (offer?.priceCents ?? 0));
+    // En remise, nous n'encaissons que la mise en relation : le prix de l'arc
+    // se règle sur place et n'entre pas dans ce que l'acheteur nous paie.
+    return handDelivery
+      ? handoverBreakdown(toCents(listing.price))
+      : priceBreakdown(toCents(listing.price), offer?.priceCents ?? 0);
   }, [listing, offer, handDelivery]);
 
   const pretAPayer =
@@ -188,7 +200,7 @@ export default function CheckoutScreen() {
             <Text style={styles.cardPrice}>{formatCents(toCents(listing.price))}</Text>
           </View>
 
-          {listing.shipping ? (
+          {escrowPossible ? (
             <View style={styles.modes}>
               <ModeChip
                 label="Faire livrer"
@@ -205,7 +217,9 @@ export default function CheckoutScreen() {
             </View>
           ) : (
             <Text style={styles.note}>
-              Ce vendeur ne propose que la remise en main propre.
+              {listing.shipping
+                ? 'Ce vendeur n’a pas encore activé le paiement sécurisé : la vente se fait en main propre.'
+                : 'Ce vendeur ne propose que la remise en main propre.'}
             </Text>
           )}
 
@@ -321,13 +335,40 @@ export default function CheckoutScreen() {
             </>
           )}
 
+          {handDelivery && (
+            <View style={styles.remise}>
+              <Text style={styles.remiseTitre}>Remise vérifiée — 0,99 €</Text>
+              <Text style={styles.remiseTexte}>
+                Vous réglez l’arc directement au vendeur, sur place, une fois que vous l’avez
+                essayé. Nous ne touchons pas cet argent : {'\n'}
+                <Text style={styles.remiseFort}>nous ne pouvons donc rien vous rembourser.</Text>
+              </Text>
+              <Text style={styles.remiseTexte}>
+                Ce que couvrent les 0,99 € : un vendeur identifié, une trace de la vente, un code
+                que vous ne donnez qu’après avoir vu l’arc, et un recours auprès de nous en cas
+                de problème.
+              </Text>
+            </View>
+          )}
+
           {estimation && (
             <View style={styles.total}>
-              <Line label="Objet" value={formatCents(estimation.item)} />
+              <Line
+                label={handDelivery ? 'Objet, payé sur place' : 'Objet'}
+                value={formatCents(estimation.item)}
+                muted={handDelivery}
+              />
               {!handDelivery && <Line label="Livraison" value={formatCents(estimation.shipping)} />}
-              <Line label="Protection acheteur" value={formatCents(estimation.protection)} />
+              <Line
+                label={handDelivery ? 'Remise vérifiée' : 'Protection acheteur'}
+                value={formatCents(estimation.protection)}
+              />
               <View style={styles.separator} />
-              <Line label="Total" value={formatCents(estimation.total)} strong />
+              <Line
+                label={handDelivery ? 'À payer maintenant' : 'Total'}
+                value={formatCents(estimation.total)}
+                strong
+              />
             </View>
           )}
 
@@ -341,7 +382,9 @@ export default function CheckoutScreen() {
             disabled={!pretAPayer}
           />
           <Text style={styles.legal}>
-            L’argent est conservé jusqu’à ce que vous confirmiez la réception.
+            {handDelivery
+              ? 'Vous payez l’arc au vendeur lors de la remise, pas ici.'
+              : 'L’argent est conservé jusqu’à ce que vous confirmiez la réception.'}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -374,10 +417,16 @@ function ModeChip({
   );
 }
 
-const Line = ({ label, value, strong }: { label: string; value: string; strong?: boolean }) => (
+const Line = ({
+  label, value, strong, muted,
+}: { label: string; value: string; strong?: boolean; muted?: boolean }) => (
   <View style={styles.line}>
-    <Text style={[styles.lineLabel, strong && styles.lineStrong]}>{label}</Text>
-    <Text style={[styles.lineValue, strong && styles.lineStrong]}>{value}</Text>
+    <Text style={[styles.lineLabel, strong && styles.lineStrong, muted && styles.lineMuted]}>
+      {label}
+    </Text>
+    <Text style={[styles.lineValue, strong && styles.lineStrong, muted && styles.lineMuted]}>
+      {value}
+    </Text>
   </View>
 );
 
@@ -422,6 +471,16 @@ const styles = StyleSheet.create({
   lineValue: { fontSize: 13, color: colors.text },
   lineStrong: { fontSize: 15, fontWeight: '800', color: colors.text },
   separator: { height: 1, backgroundColor: colors.border, marginVertical: 4 },
+  lineMuted: { color: colors.textFaint },
+  remise: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: 6,
+  },
+  remiseTitre: { fontSize: 14, fontWeight: '800', color: colors.primaryDark },
+  remiseTexte: { fontSize: 12.5, color: colors.text, lineHeight: 18 },
+  remiseFort: { fontWeight: '800' },
   error: { color: colors.danger, fontSize: 13 },
   legal: { fontSize: 12, color: colors.textFaint, textAlign: 'center' },
 });

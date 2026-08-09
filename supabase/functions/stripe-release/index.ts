@@ -36,6 +36,9 @@ Deno.serve(async (request) => {
       .from('orders')
       .select('id, seller_id, item_amount, shipping_amount, stripe_charge_id, shipments(order_id)')
       .eq('status', 'delivered')
+      // Une remise en main propre n'a aucun fonds derrière elle : virer quoi
+      // que ce soit sortirait de notre trésorerie, pas de celle de l'acheteur.
+      .eq('payment_mode', 'escrow')
       .is('stripe_transfer_id', null)
       .limit(100);
 
@@ -43,6 +46,7 @@ Deno.serve(async (request) => {
       .from('orders')
       .select('id, seller_id, item_amount, shipping_amount, stripe_charge_id, shipments(order_id)')
       .eq('status', 'shipped')
+      .eq('payment_mode', 'escrow')
       .is('stripe_transfer_id', null)
       .lt('shipped_at', limite)
       .limit(100);

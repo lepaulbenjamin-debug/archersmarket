@@ -113,31 +113,42 @@ Deno.serve(async (request) => {
     if (listing.status !== 'active') return json({ error: 'Cette annonce n’est plus disponible.' }, 409);
     if (listing.seller_id === buyerId) return json({ error: 'On n’achète pas sa propre annonce.' }, 400);
 
-    // Le vendeur doit avoir passé la vérification d'identité, sinon l'argent
-    // encaissé n'aurait nulle part où aller.
-    const { data: seller } = await db
-      .from('seller_accounts')
-      .select('stripe_account_id, charges_enabled, payouts_enabled')
-      .eq('user_id', listing.seller_id)
-      .maybeSingle();
+    // En remise en main propre, nous n'encaissons que nos frais : l'argent de
+    // l'arc passe directement d'une main à l'autre. Le vendeur n'a donc pas
+    // besoin d'être vérifié chez Stripe — et c'est cette barrière-là qui
+    // empêchait la plupart des ventes locales.
+    if (mode !== 'hand') {
+      const { data: seller } = await db
+        .from('seller_accounts')
+        .select('stripe_account_id, charges_enabled, payouts_enabled')
+        .eq('user_id', listing.seller_id)
+        .maybeSingle();
 
-    if (!seller?.charges_enabled || !seller?.payouts_enabled) {
-      return json({ error: 'Ce vendeur n’accepte pas encore le paiement sécurisé.' }, 409);
+      if (!seller?.charges_enabled || !seller?.payouts_enabled) {
+        return json({ error: 'Ce vendeur n’accepte pas encore le paiement sécurisé.' }, 409);
+      }
     }
 
     const itemAmount = Math.round(Number(listing.price) * 100);
     const shippingAmount =
       mode === 'hand' ? 0 : await coteLePort(db, listing, delivery);
 
-    // La règle de calcul vit en base : une seule définition fait foi.
-    const { data: fee, error: feeError } = await db.rpc('protection_fee', {
-      item_amount: itemAmount,
-    });
+    // Les règles de calcul vivent en base : une seule définition fait foi.
+    // En remise, c'est un forfait ; en livraison, un pourcentage du prix.
+    const { data: fee, error: feeError } = mode === 'hand'
+      ? await db.rpc('handover_fee')
+      : await db.rpc('protection_fee', { item_amount: itemAmount });
     if (feeError) throw new Error('Calcul des frais impossible.');
     const protectionAmount = Number(fee);
-    const totalAmount = itemAmount + shippingAmount + protectionAmount;
+
+    // En direct, l'acheteur ne nous règle que la mise en relation : le prix de
+    // l'arc ne transite jamais par nous, donc il n'entre pas dans le total.
+    const totalAmount = mode === 'hand'
+      ? protectionAmount
+      : itemAmount + shippingAmount + protectionAmount;
 
     const livraison = {
+      payment_mode: mode === 'hand' ? 'direct' : 'escrow',
       shipping_mode: mode,
       ship_to_civility: delivery.civility === 'Mme' ? 'Mme' : 'M',
       ship_to_name: mode === 'hand' ? null : delivery.name,

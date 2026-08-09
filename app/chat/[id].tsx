@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
+import { ScamWarning } from '@/components/ScamWarning';
 import { MemberMenu } from '@/components/MemberMenu';
 import { Header, Screen } from '@/components/Screen';
 import { colors, radius, spacing } from '@/theme';
@@ -155,6 +156,9 @@ export default function ChatScreen() {
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           renderItem={({ item }) => {
             const mine = item.senderId === user.id;
+            // On ne prévient que celui qui reçoit : avertir l'auteur ne
+            // protégerait personne, et lui apprendrait ce qui le trahit.
+            const alerte = !mine && (item.riskWeight ?? 0) >= 40;
             return (
               <View style={[styles.bubbleRow, mine && styles.bubbleRowMine]}>
                 <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
@@ -175,6 +179,7 @@ export default function ChatScreen() {
                     {formatTime(item.createdAt)}
                   </Text>
                 </View>
+                {alerte ? <ScamWarning /> : null}
               </View>
             );
           }}
@@ -243,7 +248,8 @@ const styles = StyleSheet.create({
   listingTitle: { fontSize: 13.5, fontWeight: '700', color: colors.text },
   listingPrice: { fontSize: 13, fontWeight: '700', color: colors.primary, marginTop: 1 },
   messages: { padding: spacing.lg, gap: spacing.sm, flexGrow: 1 },
-  bubbleRow: { flexDirection: 'row' },
+  bubbleRow: {
+    maxWidth: '86%', flexDirection: 'row' },
   bubbleRowMine: { justifyContent: 'flex-end' },
   bubble: {
     maxWidth: '80%',

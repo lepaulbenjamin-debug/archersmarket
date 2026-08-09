@@ -80,6 +80,13 @@ export interface Listing {
 
 export interface Message {
   id: string;
+  /**
+   * Poids du soupçon de contournement du paiement sécurisé, 0 quand rien n'a
+   * été relevé. Calculé en base à l'insertion : l'app ne peut ni le produire
+   * ni l'effacer.
+   */
+  riskWeight?: number;
+  riskReason?: string;
   conversationId: string;
   senderId: string;
   text: string;

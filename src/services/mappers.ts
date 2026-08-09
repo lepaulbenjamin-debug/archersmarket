@@ -68,6 +68,8 @@ export interface MessageRow {
   sender_id: string;
   body: string;
   offer: number | string | null;
+  risk_weight: number | null;
+  risk_reason: string | null;
   created_at: string;
 }
 
@@ -151,6 +153,8 @@ export function toMessage(row: MessageRow): Message {
     senderId: row.sender_id,
     text: row.body,
     offer: num(row.offer),
+    riskWeight: row.risk_weight ?? 0,
+    riskReason: row.risk_reason ?? undefined,
     createdAt: row.created_at,
   };
 }

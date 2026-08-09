@@ -41,6 +41,8 @@ export interface User {
   memberSince: string;
   /** Ce membre a passé la vérification Stripe et peut encaisser. */
   acceptsPayments: boolean;
+  /** Accès à la file de modération. Se pose à la main, jamais depuis l'app. */
+  isModerator?: boolean;
 }
 
 export interface Listing {

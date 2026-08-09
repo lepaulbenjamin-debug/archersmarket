@@ -3,6 +3,7 @@ import type { Conversation, Listing, Message, Review, User } from '@/types';
 
 /** Lignes telles que renvoyées par PostgREST (snake_case). */
 export interface ProfileRow {
+  is_moderator?: boolean | null;
   id: string;
   handle: string;
   name: string;
@@ -94,6 +95,7 @@ export function toUser(row: ProfileRow, email?: string): User {
     discipline: row.discipline ?? undefined,
     avatarColor: row.avatar_color,
     acceptsPayments: !!row.accepts_payments,
+    isModerator: !!row.is_moderator,
     rating: num(row.rating) ?? 0,
     reviewCount: row.review_count,
     memberSince: row.created_at,

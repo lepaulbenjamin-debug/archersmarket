@@ -37,6 +37,7 @@ function RootNavigator() {
       <Stack.Screen name="review/[id]" />
       <Stack.Screen name="import" />
       <Stack.Screen name="orders" />
+      <Stack.Screen name="moderation" />
       <Stack.Screen name="account/payment" />
       <Stack.Screen name="account/setup" />
       <Stack.Screen name="account/address" />

@@ -233,6 +233,23 @@ export default function ProfileScreen() {
             <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
           </Pressable>
 
+          {user.isModerator ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/moderation')}
+              style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+            >
+              <MaterialCommunityIcons name="shield-search" size={19} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>Modération</Text>
+                <Text style={styles.settingHint}>
+                  Comptes qui remontent et signalements en attente.
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
+
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push('/account/address')}

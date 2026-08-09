@@ -136,7 +136,18 @@ export default function CheckoutScreen() {
         returnURL: 'archersmarket://commande',
         appearance: {
           colors: { primary: colors.primary },
-          primaryButton: { shapes: { borderRadius: 999 } },
+          primaryButton: {
+            // Nos propres boutons sont des pilules, obtenues avec un rayon de
+            // 999. Ici, ce chiffre fait purement et simplement disparaître le
+            // bouton de paiement — le rayon est appliqué tel quel par le SDK,
+            // et un rayon plus grand que la moitié de la hauteur dégénère.
+            // 26 vaut la moitié de la hauteur du bouton : même arrondi, mais
+            // le bouton existe.
+            shapes: { borderRadius: 26 },
+            // Explicites plutôt que déduites : un bouton invisible est déjà
+            // arrivé une fois, on ne laisse plus la couleur au hasard.
+            colors: { background: colors.primary, text: colors.onPrimary },
+          },
         },
       });
       if (init) throw new Error(init.message);

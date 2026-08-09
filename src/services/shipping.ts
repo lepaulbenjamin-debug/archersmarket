@@ -133,6 +133,8 @@ export interface ShippingOffer {
   collectionType: string;
   deliveryType: string;
   deliveryLabel: string;
+  /** Date annoncée, au format ISO. Chaque transporteur la formatait autrement. */
+  deliveryDate: string | null;
   mandatory: string[];
 }
 
@@ -145,6 +147,14 @@ export interface ShippingOffer {
  */
 export const needsRelay = (offer: ShippingOffer): boolean =>
   offer.mandatory.includes('retrait.pointrelais');
+
+/** « mercredi 13 août », ou rien si le transporteur ne s'engage pas. */
+export function formatDeliveryDate(iso: string | null): string | null {
+  if (!iso) return null;
+  const jour = new Date(iso);
+  if (Number.isNaN(jour.getTime())) return null;
+  return jour.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
 
 /**
  * Où le colis arrive, du point de vue de l'acheteur.

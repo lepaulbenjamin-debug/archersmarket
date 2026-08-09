@@ -14,7 +14,8 @@ import {
   createCheckout, formatCents, handoverBreakdown, priceBreakdown, toCents,
 } from '@/services/payments';
 import {
-  deliversToRelay, fetchOffers, fetchRelayPoints, fetchSellerAddress, needsRelay,
+  deliversToRelay, fetchOffers, fetchRelayPoints, fetchSellerAddress,
+  formatDeliveryDate, needsRelay,
   type Civility, type DeliveryAddress, type RelayPoint, type ShippingOffer,
 } from '@/services/shipping';
 import { AddressField } from '@/components/AddressField';
@@ -396,9 +397,20 @@ export default function CheckoutScreen() {
                       >
                         <View style={styles.flex}>
                           <Text style={styles.offerName}>{candidate.operatorLabel}</Text>
+                          {/* Le nom du service, pas la destination : celle-ci est
+                              déjà donnée par l'onglet. Et c'est lui qui
+                              distingue « Chrono Relais 13 » de « Chrono
+                              Relais 13 collecte », que le libellé de livraison
+                              confondait — d'où deux lignes en apparence
+                              identiques à deux tarifs différents. */}
                           <Text style={styles.offerService}>
-                            {candidate.deliveryLabel || candidate.serviceLabel}
+                            {candidate.serviceLabel || candidate.deliveryLabel}
                           </Text>
+                          {formatDeliveryDate(candidate.deliveryDate) ? (
+                            <Text style={styles.offerDate}>
+                              Livré {formatDeliveryDate(candidate.deliveryDate)}
+                            </Text>
+                          ) : null}
                         </View>
                         <Text style={[styles.offerPrice, actif && styles.offerPriceActive]}>
                           {formatCents(candidate.priceCents)}
@@ -563,6 +575,7 @@ const styles = StyleSheet.create({
   offerActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   offerName: { fontSize: 14, fontWeight: '700', color: colors.text },
   offerService: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  offerDate: { fontSize: 11.5, color: colors.textFaint, marginTop: 1 },
   offerPrice: { fontSize: 15, fontWeight: '800', color: colors.text },
   offerPriceActive: { color: colors.primary },
   total: {

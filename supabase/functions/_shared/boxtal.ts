@@ -269,12 +269,28 @@ export interface Offer {
   deliveryType: string;
   deliveryLabel: string;
   /**
+   * Date de livraison annoncée, au format ISO.
+   *
+   * Elle est captée à part parce que chaque transporteur la formate à sa
+   * façon dans son libellé : « le 13/08/2026 » chez Mondial Relay,
+   * « le 2026-08-13 » chez UPS. Les mêler à l'écran donne une liste qui a
+   * l'air cassée.
+   */
+  deliveryDate: string | null;
+  /**
    * Les paramètres que l'offre exige à la commande, par leur code Boxtal.
    * `retrait.pointrelais` y figure pour toute livraison en relais : réserver
    * sans le fournir se solde par un refus.
    */
   mandatory: string[];
 }
+
+/** Retire la date que le transporteur a collée à son libellé. */
+const nettoieLibelle = (libelle: string): string =>
+  libelle
+    .replace(/\s+le\s+\d{4}-\d{2}-\d{2}\s*$/i, '')
+    .replace(/\s+le\s+\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\s*$/i, '')
+    .trim();
 
 const cents = (value: string | null): number =>
   value ? Math.round(Number(value.replace(',', '.')) * 100) : 0;
@@ -297,7 +313,8 @@ export function readOffers(document: XmlNode): Offer[] {
       ),
       collectionType: pathText(offre, 'collection', 'type', 'code') ?? '',
       deliveryType: pathText(offre, 'delivery', 'type', 'code') ?? '',
-      deliveryLabel: pathText(offre, 'delivery', 'label') ?? '',
+      deliveryLabel: nettoieLibelle(pathText(offre, 'delivery', 'label') ?? ''),
+      deliveryDate: pathText(offre, 'delivery', 'date'),
       mandatory: (path(offre, 'mandatory_informations')?.children ?? [])
         .filter((parametre) => parametre.name === 'parameter')
         .map((parametre) => pathText(parametre, 'code') ?? '')

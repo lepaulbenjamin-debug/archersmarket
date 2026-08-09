@@ -78,6 +78,8 @@ export interface Listing {
   status: ListingStatus;
   createdAt: string;
   views: number;
+  /** Combien de membres l'ont mise en favori. Tenu en base, jamais par l'app. */
+  favoritesCount: number;
 }
 
 export interface Message {

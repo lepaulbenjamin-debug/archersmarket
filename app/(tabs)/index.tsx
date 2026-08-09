@@ -1,11 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { FiltersSheet } from '@/components/FiltersSheet';
+import {
+  createSavedSearch, describeFilters, hasCriteria,
+} from '@/services/savedSearches';
 import { ListingGrid } from '@/components/ListingGrid';
 import { Logo } from '@/components/Logo';
 import { SearchField } from '@/components/SearchField';
@@ -64,6 +67,46 @@ export default function BrowseScreen() {
   };
 
   const currentSort = sortOptions.find((o) => o.id === (filters.sort ?? 'recent'));
+
+  // Les critères réellement en vigueur : le texte tapé compte autant que les
+  // filtres, et le tri ne définit pas une recherche.
+  const critereCourant = useMemo(
+    () => ({ ...filters, query: query.trim() || undefined, sort: undefined }),
+    [filters, query],
+  );
+
+  /**
+   * Enregistrer la recherche pour être prévenu des prochaines annonces.
+   *
+   * Refusé sans le moindre critère : une alerte sur tout le marché sonnerait
+   * à chaque publication, et finirait désactivée au niveau du téléphone —
+   * emportant avec elle les messages et les ventes.
+   */
+  const creerAlerte = () => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    const nom = describeFilters(critereCourant);
+    Alert.alert(
+      'Être prévenu des nouveautés',
+      `Vous recevrez une notification à chaque annonce correspondant à « ${nom} ».`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Créer l’alerte',
+          onPress: async () => {
+            try {
+              await createSavedSearch(critereCourant);
+              Alert.alert('Alerte créée', 'Retrouvez-la dans Mon compte, à tout moment.');
+            } catch (err) {
+              Alert.alert('Alerte impossible', (err as Error).message);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <Screen>
@@ -130,6 +173,19 @@ export default function BrowseScreen() {
           {results.length} annonce{results.length > 1 ? 's' : ''}
         </Text>
       </View>
+
+      {hasCriteria(critereCourant) ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={creerAlerte}
+          style={({ pressed }) => [styles.alertBar, pressed && styles.pressed]}
+        >
+          <MaterialCommunityIcons name="bell-plus-outline" size={17} color={colors.primary} />
+          <Text style={styles.alertText} numberOfLines={1}>
+            Me prévenir des nouveautés « {describeFilters(critereCourant)} »
+          </Text>
+        </Pressable>
+      ) : null}
 
       {error ? (
         <Pressable
@@ -250,6 +306,18 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   sortLabel: { fontSize: 13, fontWeight: '600', color: colors.text },
+  alertBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  alertText: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.primaryDark },
   resultsCount: { fontSize: 13, fontWeight: '600', color: colors.textFaint },
   loader: { marginTop: spacing.xl },
   errorBanner: {

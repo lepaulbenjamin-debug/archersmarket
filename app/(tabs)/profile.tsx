@@ -252,6 +252,21 @@ export default function ProfileScreen() {
 
           <Pressable
             accessibilityRole="button"
+            onPress={() => router.push('/account/alerts')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="bell-ring-outline" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Mes alertes</Text>
+              <Text style={styles.settingHint}>
+                Être prévenu dès qu’une annonce correspond à vos recherches.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
             onPress={() => router.push('/account/address')}
             style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
           >

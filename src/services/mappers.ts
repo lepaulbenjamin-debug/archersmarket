@@ -39,6 +39,7 @@ export interface ListingRow {
   shipping: boolean;
   shipping_price: number | string | null;
   parcel_size: 'small' | 'medium' | 'long' | 'xl' | null;
+  favorites_count: number | null;
   status: Listing['status'];
   views: number;
   created_at: string;
@@ -134,6 +135,7 @@ export function toListing(row: ListingRow): Listing {
     status: row.status,
     createdAt: row.created_at,
     views: row.views,
+    favoritesCount: row.favorites_count ?? 0,
   };
 }
 

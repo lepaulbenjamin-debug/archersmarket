@@ -223,6 +223,14 @@ export default function ListingScreen() {
             <MetaItem icon="map-marker-outline" label={listing.city} />
             <MetaItem icon="clock-outline" label={formatRelativeDate(listing.createdAt)} />
             <MetaItem icon="eye-outline" label={`${listing.views} vues`} />
+            {/* En dessous de deux, le compte n'apprend rien : l'acheteur qui
+                vient de cliquer sur le cœur se compterait lui-même. */}
+            {listing.favoritesCount >= 2 ? (
+              <MetaItem
+                icon="heart-outline"
+                label={`${listing.favoritesCount} favoris`}
+              />
+            ) : null}
           </View>
 
           <Text style={styles.sectionTitle}>Description</Text>

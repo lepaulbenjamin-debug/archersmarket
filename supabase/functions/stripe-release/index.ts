@@ -10,8 +10,11 @@
  *   — le colis est parti depuis assez longtemps et personne n'a rien signalé,
  *     sans quoi un acheteur silencieux bloquerait le vendeur indéfiniment.
  *
- * Le vendeur reçoit le prix de l'objet et les frais de port. La plateforme
- * garde la protection, sur laquelle Stripe prélève sa commission.
+ * Le vendeur reçoit le prix de l'objet, et les frais de port seulement s'il a
+ * expédié par ses propres moyens. Quand la plateforme a acheté l'étiquette
+ * avec le port encaissé, lui virer ce port en plus reviendrait à le payer
+ * deux fois. La plateforme garde la protection, sur laquelle Stripe prélève
+ * sa commission.
  */
 import { isScheduler, json, serviceClient } from '../_shared/context.ts';
 import { stripeRequest } from '../_shared/stripe.ts';
@@ -31,14 +34,14 @@ Deno.serve(async (request) => {
   try {
     const { data: confirmees } = await db
       .from('orders')
-      .select('id, seller_id, item_amount, shipping_amount, stripe_charge_id')
+      .select('id, seller_id, item_amount, shipping_amount, stripe_charge_id, shipments(order_id)')
       .eq('status', 'delivered')
       .is('stripe_transfer_id', null)
       .limit(100);
 
     const { data: silencieuses } = await db
       .from('orders')
-      .select('id, seller_id, item_amount, shipping_amount, stripe_charge_id')
+      .select('id, seller_id, item_amount, shipping_amount, stripe_charge_id, shipments(order_id)')
       .eq('status', 'shipped')
       .is('stripe_transfer_id', null)
       .lt('shipped_at', limite)
@@ -62,7 +65,11 @@ Deno.serve(async (request) => {
           continue;
         }
 
-        const montant = order.item_amount + order.shipping_amount;
+        // Le port ne suit que s'il est resté dans la poche du vendeur.
+        const etiquetteAchetee = Array.isArray(order.shipments)
+          ? order.shipments.length > 0
+          : Boolean(order.shipments);
+        const montant = order.item_amount + (etiquetteAchetee ? 0 : order.shipping_amount);
         const transfer = await stripeRequest<{ id: string }>(
           'POST',
           '/transfers',

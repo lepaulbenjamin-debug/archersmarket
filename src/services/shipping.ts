@@ -146,6 +146,17 @@ export interface ShippingOffer {
 export const needsRelay = (offer: ShippingOffer): boolean =>
   offer.mandatory.includes('retrait.pointrelais');
 
+/**
+ * Où le colis arrive, du point de vue de l'acheteur.
+ *
+ * À distinguer de `needsRelay`, qui dit s'il faudra *choisir* un point : une
+ * offre Colissimo livre en « PickupStation » sans en réclamer, relevé sur une
+ * vraie cotation. Pour classer à l'écran, c'est la destination qui compte ;
+ * pour réserver, c'est ce que l'offre exige.
+ */
+export const deliversToRelay = (offer: ShippingOffer): boolean =>
+  offer.deliveryType === 'PICKUP_POINT' || needsRelay(offer);
+
 /** Le vendeur devra-t-il choisir où déposer ? Cela se règle à l'étiquette. */
 export const needsDropoff = (offer: ShippingOffer): boolean =>
   offer.mandatory.includes('depot.pointrelais');

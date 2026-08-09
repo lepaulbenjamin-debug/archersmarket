@@ -14,7 +14,7 @@ import {
   createCheckout, formatCents, handoverBreakdown, priceBreakdown, toCents,
 } from '@/services/payments';
 import {
-  fetchOffers, fetchRelayPoints, fetchSellerAddress, needsRelay,
+  deliversToRelay, fetchOffers, fetchRelayPoints, fetchSellerAddress, needsRelay,
   type Civility, type DeliveryAddress, type RelayPoint, type ShippingOffer,
 } from '@/services/shipping';
 import { AddressField } from '@/components/AddressField';
@@ -62,6 +62,11 @@ export default function CheckoutScreen() {
   const [point, setPoint] = useState<RelayPoint | null>(null);
   const [handDelivery, setHandDelivery] = useState(true);
   const [busy, setBusy] = useState<'offers' | 'points' | 'pay' | null>(null);
+  // Vingt et une offres à la suite, personne ne les lit. On les range par
+  // destination : c'est la question que se pose l'acheteur en premier —
+  // « je vais le chercher, ou on me l'apporte ? »
+  const [famille, setFamille] = useState<'relay' | 'home'>('relay');
+  const [toutVoir, setToutVoir] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -109,6 +114,24 @@ export default function CheckoutScreen() {
     setPoints(null);
     setPoint(null);
   }, [address.zip, address.city, address.country]);
+
+  const familles = useMemo(() => {
+    const liste = offers ?? [];
+    return {
+      relay: liste.filter(deliversToRelay),
+      home: liste.filter((candidate) => !deliversToRelay(candidate)),
+    };
+  }, [offers]);
+
+  // On ouvre sur la famille la moins chère : c'est presque toujours le relais,
+  // mais mieux vaut le constater que le supposer.
+  useEffect(() => {
+    if (!offers?.length) return;
+    const moinsCher = (liste: ShippingOffer[]) =>
+      liste.length ? Math.min(...liste.map((o) => o.priceCents)) : Infinity;
+    setFamille(moinsCher(familles.relay) <= moinsCher(familles.home) ? 'relay' : 'home');
+    setToutVoir(false);
+  }, [offers, familles]);
 
   const chercherOffres = useCallback(async () => {
     if (!id || !adresseComplete) return;
@@ -322,7 +345,45 @@ export default function CheckoutScreen() {
               ) : (
                 <>
                   <Text style={styles.section}>Transporteur</Text>
-                  {offers.map((candidate) => {
+                  <View style={styles.familles}>
+                    {([
+                      ['relay', 'En point relais', familles.relay],
+                      ['home', 'À domicile', familles.home],
+                    ] as const).map(([cle, libelle, liste]) => {
+                      const actif = famille === cle;
+                      const mini = liste.length
+                        ? Math.min(...liste.map((o) => o.priceCents))
+                        : null;
+                      return (
+                        <Pressable
+                          key={cle}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: actif }}
+                          disabled={liste.length === 0}
+                          onPress={() => {
+                            setFamille(cle);
+                            setToutVoir(false);
+                          }}
+                          style={[
+                            styles.famille,
+                            actif && styles.familleActive,
+                            liste.length === 0 && styles.familleVide,
+                          ]}
+                        >
+                          <Text style={[styles.familleLabel, actif && styles.familleLabelActive]}>
+                            {libelle}
+                          </Text>
+                          <Text style={[styles.familleMeta, actif && styles.familleMetaActive]}>
+                            {mini === null
+                              ? 'aucune'
+                              : `${liste.length} · dès ${formatCents(mini)}`}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {(toutVoir ? familles[famille] : familles[famille].slice(0, 5)).map((candidate) => {
                     const actif =
                       offer?.operatorCode === candidate.operatorCode &&
                       offer?.serviceCode === candidate.serviceCode;
@@ -345,6 +406,18 @@ export default function CheckoutScreen() {
                       </Pressable>
                     );
                   })}
+
+                  {!toutVoir && familles[famille].length > 5 ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => setToutVoir(true)}
+                      hitSlop={6}
+                    >
+                      <Text style={styles.voirPlus}>
+                        Voir les {familles[famille].length - 5} autres
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </>
               )}
 
@@ -502,6 +575,29 @@ const styles = StyleSheet.create({
   lineStrong: { fontSize: 15, fontWeight: '800', color: colors.text },
   separator: { height: 1, backgroundColor: colors.border, marginVertical: 4 },
   lineMuted: { color: colors.textFaint },
+  familles: { flexDirection: 'row', gap: spacing.sm },
+  famille: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+  },
+  familleActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  familleVide: { opacity: 0.4 },
+  familleLabel: { fontSize: 13.5, fontWeight: '700', color: colors.textMuted },
+  familleLabelActive: { color: colors.primaryDark },
+  familleMeta: { fontSize: 11, color: colors.textFaint },
+  familleMetaActive: { color: colors.primaryDark },
+  voirPlus: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    textAlign: 'center',
+    paddingVertical: spacing.xs,
+  },
   remise: {
     backgroundColor: colors.primarySoft,
     borderRadius: radius.md,

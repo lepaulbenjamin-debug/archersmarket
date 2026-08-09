@@ -17,7 +17,10 @@ import {
   statusLabel,
   type Order,
 } from '@/services/payments';
-import { createLabel, fetchShipment, type Shipment } from '@/services/shipping';
+import {
+  createLabel, fetchRelayPoints, fetchShipment,
+  type RelayPoint, type Shipment,
+} from '@/services/shipping';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 
@@ -41,6 +44,10 @@ export default function OrderScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [labelling, setLabelling] = useState(false);
+  // Certains transporteurs veulent savoir où le vendeur déposera le colis.
+  // On ne le demande qu'à ce moment-là : l'acheteur ne peut pas le choisir,
+  // il ne sait pas d'où part le paquet.
+  const [dropoffs, setDropoffs] = useState<RelayPoint[] | null>(null);
   const [carrier, setCarrier] = useState('');
   const [tracking, setTracking] = useState('');
 
@@ -96,14 +103,38 @@ export default function OrderScreen() {
   // L'étiquette est payée par la plateforme avec le port déjà encaissé : le
   // vendeur n'a rien à avancer. Deux appuis ne l'achètent pas deux fois — la
   // fonction Edge rend la même expédition.
-  const editerEtiquette = async () => {
+  const editerEtiquette = async (depot?: RelayPoint) => {
     setLabelling(true);
     try {
-      const { labelUrl } = await createLabel(order.id);
+      const { labelUrl } = await createLabel(
+        order.id,
+        depot ? { code: depot.code, label: `${depot.name}, ${depot.address} ${depot.zip} ${depot.city}` } : undefined,
+      );
+      setDropoffs(null);
       await load();
       if (labelUrl) await WebBrowser.openBrowserAsync(labelUrl);
     } catch (error) {
-      Alert.alert('Étiquette indisponible', (error as Error).message);
+      const details = error as Error & {
+        needsDropoff?: boolean;
+        operator?: string;
+        service?: string;
+        from?: { zip: string; city: string; country: string };
+      };
+      if (details.needsDropoff && details.from && details.operator && details.service) {
+        try {
+          setDropoffs(
+            await fetchRelayPoints(
+              { operatorCode: details.operator, serviceCode: details.service },
+              details.from,
+              'dropoff',
+            ),
+          );
+        } catch (autre) {
+          Alert.alert('Points de dépôt indisponibles', (autre as Error).message);
+        }
+      } else {
+        Alert.alert('Étiquette indisponible', details.message);
+      }
     } finally {
       setLabelling(false);
     }
@@ -277,12 +308,38 @@ export default function OrderScreen() {
                     L’étiquette est déjà payée par les frais de port. Imprimez-la, collez-la sur le
                     colis, et déposez-le.
                   </Text>
-                  <Button
-                    label="Éditer l’étiquette"
-                    icon="printer-outline"
-                    onPress={editerEtiquette}
-                    loading={labelling}
-                  />
+                  {dropoffs ? (
+                    <>
+                      <Text style={styles.cardTitle}>Où déposerez-vous le colis ?</Text>
+                      {dropoffs.slice(0, 12).map((point) => (
+                        <Pressable
+                          key={point.code}
+                          accessibilityRole="button"
+                          onPress={() => editerEtiquette(point)}
+                          style={({ pressed }) => [styles.depot, pressed && styles.pressed]}
+                        >
+                          <MaterialCommunityIcons
+                            name="storefront-outline"
+                            size={18}
+                            color={colors.primary}
+                          />
+                          <View style={styles.flex}>
+                            <Text style={styles.depotName}>{point.name}</Text>
+                            <Text style={styles.depotAddress}>
+                              {point.address}, {point.zip} {point.city}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      ))}
+                    </>
+                  ) : (
+                    <Button
+                      label="Éditer l’étiquette"
+                      icon="printer-outline"
+                      onPress={() => editerEtiquette()}
+                      loading={labelling}
+                    />
+                  )}
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => router.push('/account/address')}
@@ -374,6 +431,20 @@ function Ligne({ label, value, fort }: { label: string; value: string; fort?: bo
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  pressed: { opacity: 0.85 },
+  depot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 11,
+  },
+  depotName: { fontSize: 14, fontWeight: '700', color: colors.text },
+  depotAddress: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   loader: { marginTop: spacing.xxl },
   absent: { textAlign: 'center', color: colors.textMuted, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },

@@ -58,7 +58,11 @@ export function suggestedParcel(category: string): ParcelSize {
 // vivre sur un profil public.
 // ---------------------------------------------------------------------------
 
+/** Les transporteurs n'acceptent que « M » ou « Mme ». Ce n'est pas notre choix. */
+export type Civility = 'M' | 'Mme';
+
 export interface SellerAddress {
+  civility: Civility;
   fullName: string;
   address: string;
   zip: string;
@@ -70,11 +74,12 @@ export interface SellerAddress {
 export async function fetchSellerAddress(): Promise<SellerAddress | null> {
   const { data, error } = await supabase
     .from('seller_addresses')
-    .select('full_name, address, zip, city, country, phone')
+    .select('civility, full_name, address, zip, city, country, phone')
     .maybeSingle();
   if (error) fail(error, 'Adresse d’expédition indisponible.');
   if (!data) return null;
   return {
+    civility: (data.civility as Civility) ?? 'M',
     fullName: data.full_name as string,
     address: data.address as string,
     zip: data.zip as string,
@@ -91,6 +96,7 @@ export async function saveSellerAddress(address: SellerAddress): Promise<void> {
 
   const { error } = await supabase.from('seller_addresses').upsert({
     user_id: userId,
+    civility: address.civility,
     full_name: address.fullName.trim(),
     address: address.address.trim(),
     zip: address.zip.trim(),
@@ -109,6 +115,7 @@ export async function saveSellerAddress(address: SellerAddress): Promise<void> {
 export type ShippingMode = 'home' | 'relay' | 'hand';
 
 export interface DeliveryAddress {
+  civility: Civility;
   name: string;
   address: string;
   zip: string;
@@ -129,9 +136,19 @@ export interface ShippingOffer {
   mandatory: string[];
 }
 
-/** L'offre livre-t-elle en point relais ? Il faudra alors en choisir un. */
+/**
+ * L'acheteur doit-il choisir un point de retrait ?
+ *
+ * On se fie à ce que l'offre déclare exiger, pas à son type de livraison :
+ * relevé sur une vraie cotation, une offre Colissimo livre en « PickupStation »
+ * sans jamais réclamer de point de retrait.
+ */
 export const needsRelay = (offer: ShippingOffer): boolean =>
-  offer.deliveryType === 'PICKUP_POINT' || offer.mandatory.includes('retrait.pointrelais');
+  offer.mandatory.includes('retrait.pointrelais');
+
+/** Le vendeur devra-t-il choisir où déposer ? Cela se règle à l'étiquette. */
+export const needsDropoff = (offer: ShippingOffer): boolean =>
+  offer.mandatory.includes('depot.pointrelais');
 
 export interface RelayPoint {
   code: string;
@@ -147,6 +164,14 @@ export interface RelayPoint {
  * Sans cette lecture, « aucun transporteur ne dessert cette adresse » se
  * réduirait à « une erreur est survenue ».
  */
+async function edgeBody(error: unknown): Promise<Record<string, any> | null> {
+  try {
+    return await (error as { context?: Response })?.context?.clone().json();
+  } catch {
+    return null;
+  }
+}
+
 async function edgeMessage(error: unknown, fallback: string): Promise<string> {
   const response = (error as { context?: Response })?.context;
   try {
@@ -172,13 +197,26 @@ export async function fetchOffers(
   return payload.offers ?? [];
 }
 
-/** Les points relais desservant l'adresse, pour le transporteur retenu. */
+/**
+ * Les points relais desservant une adresse, pour l'offre retenue.
+ *
+ * Retirer et déposer ne donnent pas la même liste : `pickup` est le point où
+ * l'acheteur récupère, `dropoff` celui où le vendeur remet.
+ */
 export async function fetchRelayPoints(
-  operator: string,
-  destination: Pick<DeliveryAddress, 'zip' | 'city' | 'country'>,
+  offer: Pick<ShippingOffer, 'operatorCode' | 'serviceCode'>,
+  destination: { zip: string; city: string; country?: string },
+  purpose: 'pickup' | 'dropoff' = 'pickup',
 ): Promise<RelayPoint[]> {
   const { data, error } = await supabase.functions.invoke('boxtal-points', {
-    body: { operator, zip: destination.zip, city: destination.city, country: destination.country },
+    body: {
+      operator: offer.operatorCode,
+      service: offer.serviceCode,
+      zip: destination.zip,
+      city: destination.city,
+      country: destination.country ?? 'FR',
+      purpose,
+    },
   });
   if (error) throw new Error(await edgeMessage(error, 'Points relais indisponibles.'));
   const payload = data as { points?: RelayPoint[]; error?: string };
@@ -222,9 +260,27 @@ export async function fetchShipment(orderId: string): Promise<Shipment | null> {
  * fois ne doit pas payer deux expéditions — c'est la fonction Edge qui le
  * garantit, pas cet écran.
  */
-export async function createLabel(orderId: string): Promise<{ reference: string; labelUrl: string | null }> {
-  const { data, error } = await supabase.functions.invoke('boxtal-label', { body: { orderId } });
-  if (error) throw new Error(await edgeMessage(error, 'Édition de l’étiquette impossible.'));
+export interface DropoffNeeded {
+  needsDropoff: true;
+  operator: string;
+  service: string;
+  from: { zip: string; city: string; country: string };
+}
+
+export async function createLabel(
+  orderId: string,
+  dropoff?: { code: string; label: string },
+): Promise<{ reference: string; labelUrl: string | null }> {
+  const { data, error } = await supabase.functions.invoke('boxtal-label', {
+    body: { orderId, dropoffCode: dropoff?.code, dropoffLabel: dropoff?.label },
+  });
+  if (error) {
+    // Le transporteur réclame un point de dépôt : ce n'est pas un échec, c'est
+    // une question. On la remonte telle quelle pour que l'écran la pose.
+    const corps = await edgeBody(error);
+    if (corps?.needsDropoff) throw Object.assign(new Error(corps.error), corps);
+    throw new Error(corps?.error ?? 'Édition de l’étiquette impossible.');
+  }
   const payload = data as { reference?: string; label_url?: string | null; error?: string };
   if (payload?.error) throw new Error(payload.error);
   if (!payload?.reference) throw new Error('Le transporteur n’a pas confirmé l’expédition.');

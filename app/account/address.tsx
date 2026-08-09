@@ -5,7 +5,8 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } fr
 import { Button } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { Header, Screen } from '@/components/Screen';
-import { fetchSellerAddress, saveSellerAddress, type SellerAddress } from '@/services/shipping';
+import { fetchSellerAddress, saveSellerAddress, type Civility, type SellerAddress } from '@/services/shipping';
+import { CivilityPicker } from '@/components/CivilityPicker';
 import { useAuth } from '@/store/AuthContext';
 import { colors, radius, spacing } from '@/theme';
 
@@ -21,6 +22,7 @@ export default function SellerAddressScreen() {
   const { user } = useAuth();
 
   const [form, setForm] = useState<SellerAddress>({
+    civility: 'M',
     fullName: user?.name ?? '',
     address: '',
     zip: '',
@@ -74,6 +76,10 @@ export default function SellerAddressScreen() {
             </Text>
           </View>
 
+          <CivilityPicker
+            value={form.civility}
+            onChange={(civility: Civility) => setForm((prev) => ({ ...prev, civility }))}
+          />
           <Field
             label="Nom et prénom"
             value={form.fullName}

@@ -16,6 +16,7 @@ import {
 
 interface Delivery {
   mode?: 'home' | 'relay' | 'hand';
+  civility?: 'M' | 'Mme';
   name?: string;
   address?: string;
   zip?: string;
@@ -138,6 +139,7 @@ Deno.serve(async (request) => {
 
     const livraison = {
       shipping_mode: mode,
+      ship_to_civility: delivery.civility === 'Mme' ? 'Mme' : 'M',
       ship_to_name: mode === 'hand' ? null : delivery.name,
       ship_to_address: mode === 'hand' ? null : delivery.address,
       ship_to_zip: mode === 'hand' ? null : delivery.zip,

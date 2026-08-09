@@ -8,7 +8,7 @@
  */
 import { CORS, callerId, json, serviceClient } from '../_shared/context.ts';
 import {
-  CONTENU_SPORT, boxtalGet, parcelOf, parcelParams, readOffers,
+  CONTENU_SPORT, boxtalGet, offreRealisable, parcelOf, parcelParams, readOffers,
 } from '../_shared/boxtal.ts';
 
 /** Demain : la plupart des transporteurs refusent un enlèvement le jour même. */
@@ -70,8 +70,12 @@ Deno.serve(async (request) => {
       ...parcelParams(colis),
     });
 
-    // Du moins cher au plus cher : c'est l'ordre dans lequel on les lit.
-    const offres = readOffers(document).sort((a, b) => a.priceCents - b.priceCents);
+    // On n'affiche que ce qu'on saura réserver : une offre retenue puis
+    // refusée à l'étiquette laisserait un acheteur payé et un colis bloqué.
+    // Du moins cher au plus cher, c'est l'ordre dans lequel on les lit.
+    const offres = readOffers(document)
+      .filter(offreRealisable)
+      .sort((a, b) => a.priceCents - b.priceCents);
     if (offres.length === 0) {
       return json({ error: 'Aucun transporteur ne dessert cette adresse pour ce colis.' }, 409);
     }

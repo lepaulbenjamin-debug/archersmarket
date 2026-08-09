@@ -268,6 +268,8 @@ export interface Checkout {
 /** Le choix de livraison transmis au paiement. */
 export interface CheckoutDelivery {
   mode: 'home' | 'relay' | 'hand';
+  /** Exigée par tous les transporteurs sur l'étiquette. */
+  civility?: 'M' | 'Mme';
   name?: string;
   address?: string;
   zip?: string;

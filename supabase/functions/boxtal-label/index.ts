@@ -11,7 +11,8 @@
  */
 import { CORS, callerId, json, serviceClient } from '../_shared/context.ts';
 import {
-  CONTENU_SPORT, boxtalPost, fetchLabel, firstText, parcelOf, parcelParams, pathText,
+  CONTENU_SPORT, boxtalGet, boxtalPost, exigePointDepot, exigePointRetrait, fetchLabel,
+  firstText, offreRealisable, parcelOf, parcelParams, pathText, readOffers,
 } from '../_shared/boxtal.ts';
 
 const demain = (): string =>
@@ -34,7 +35,7 @@ Deno.serve(async (request) => {
     const sellerId = await callerId(request);
     if (!sellerId) return json({ error: 'Connexion requise.' }, 401);
 
-    const { orderId } = await request.json();
+    const { orderId, dropoffCode, dropoffLabel } = await request.json();
     if (!orderId) return json({ error: 'Commande non précisée.' }, 400);
 
     const db = serviceClient();
@@ -43,7 +44,7 @@ Deno.serve(async (request) => {
       .from('orders')
       // Une seule chaîne littérale : découpée avec des `+`, supabase-js perd
       // le type de la ligne et rend une erreur générique.
-      .select('id, seller_id, buyer_id, listing_id, listing_title, item_amount, status, shipping_mode, ship_to_name, ship_to_address, ship_to_zip, ship_to_city, ship_to_country, ship_to_phone, relay_code, carrier_operator, carrier_service')
+      .select('id, seller_id, buyer_id, listing_id, listing_title, item_amount, status, shipping_mode, ship_to_civility, ship_to_name, ship_to_address, ship_to_zip, ship_to_city, ship_to_country, ship_to_phone, relay_code, carrier_operator, carrier_service')
       .eq('id', orderId)
       .maybeSingle();
 
@@ -73,7 +74,7 @@ Deno.serve(async (request) => {
 
     const { data: depart } = await db
       .from('seller_addresses')
-      .select('full_name, address, zip, city, country, phone')
+      .select('civility, full_name, address, zip, city, country, phone')
       .eq('user_id', sellerId)
       .maybeSingle();
     if (!depart) {
@@ -89,12 +90,58 @@ Deno.serve(async (request) => {
     const colis = parcelOf(listing?.parcel_size);
     const [prenom, ...reste] = String(order.ship_to_name ?? '').trim().split(/\s+/);
 
+    // Ce que l'offre exigera vraiment. On le redemande au lieu de le supposer :
+    // les exigences varient d'un transporteur à l'autre, et une commande
+    // refusée après paiement laisserait l'acheteur payé et le colis bloqué.
+    const cotation = await boxtalGet('api/v1/cotation', {
+      'shipper.country': depart.country,
+      'shipper.zipcode': depart.zip,
+      'shipper.city': depart.city,
+      'shipper.type': 'individual',
+      'recipient.country': order.ship_to_country ?? 'FR',
+      'recipient.zipcode': order.ship_to_zip ?? '',
+      'recipient.city': order.ship_to_city ?? '',
+      'recipient.type': 'individual',
+      collection_date: demain(),
+      content_code: CONTENU_SPORT,
+      'colis.valeur': (order.item_amount / 100).toFixed(2),
+      ...parcelParams(colis),
+    });
+
+    const offre = readOffers(cotation).find(
+      (candidate) =>
+        candidate.operatorCode === order.carrier_operator &&
+        candidate.serviceCode === order.carrier_service,
+    );
+    if (!offre || !offreRealisable(offre)) {
+      return json(
+        { error: 'Ce transporteur ne dessert plus cette adresse. Contactez l’acheteur.' },
+        409,
+      );
+    }
+
+    // Le point de dépôt est celui du vendeur — il ne peut pas être choisi à
+    // l'achat, l'acheteur ne sait pas d'où part le colis. On le réclame ici,
+    // et l'app présente alors la liste.
+    if (exigePointDepot(offre) && !dropoffCode) {
+      return json(
+        {
+          error: 'Choisissez le point relais où vous déposerez le colis.',
+          needsDropoff: true,
+          operator: offre.operatorCode,
+          from: { zip: depart.zip, city: depart.city, country: depart.country },
+        },
+        409,
+      );
+    }
+
     const parametres: Record<string, string | number | boolean> = {
       'shipper.country': depart.country,
       'shipper.zipcode': depart.zip,
       'shipper.city': depart.city,
       'shipper.address': depart.address,
       'shipper.type': 'individual',
+      'shipper.title': depart.civility,
       'shipper.firstname': depart.full_name.split(/\s+/)[0],
       'shipper.lastname': depart.full_name.split(/\s+/).slice(1).join(' ') || depart.full_name,
       'shipper.phone': depart.phone,
@@ -105,6 +152,7 @@ Deno.serve(async (request) => {
       'recipient.city': order.ship_to_city ?? '',
       'recipient.address': order.ship_to_address ?? '',
       'recipient.type': 'individual',
+      'recipient.title': order.ship_to_civility ?? 'M',
       'recipient.firstname': prenom || 'Client',
       'recipient.lastname': reste.join(' ') || prenom || 'Client',
       'recipient.phone': order.ship_to_phone ?? '',
@@ -121,26 +169,34 @@ Deno.serve(async (request) => {
       ...parcelParams(colis),
     };
 
-    if (order.shipping_mode === 'relay' && order.relay_code) {
+    // Retrait et dépôt sont deux choses distinctes : l'un est le point où
+    // l'acheteur récupère, l'autre celui où le vendeur remet. Une offre peut
+    // exiger l'un, l'autre, ou les deux.
+    if (exigePointRetrait(offre) && order.relay_code) {
       parametres['retrait.pointrelais'] = order.relay_code;
+    }
+    if (exigePointDepot(offre)) {
+      parametres['depot.pointrelais'] = String(dropoffCode);
     }
 
     const reponse = await boxtalPost('api/v1/order', parametres);
     const reference = firstText(reponse, 'reference');
     if (!reference) throw new Error('Boxtal n’a pas renvoyé de référence d’expédition.');
 
-    const offre = reponse.children[0]?.children[0]?.children.find((n) => n.name === 'offer') ?? null;
+    const confirmation = reponse.children[0]?.children[0]?.children.find((n) => n.name === 'offer') ?? null;
 
     // On enregistre avant de télécharger : si le PDF tarde, l'expédition
     // existe déjà chez le transporteur et ne doit pas être commandée deux fois.
     const { error: insertError } = await db.from('shipments').insert({
       order_id: order.id,
       reference,
-      operator_code: pathText(offre, 'operator', 'code') ?? order.carrier_operator,
-      operator_label: pathText(offre, 'operator', 'label') ?? order.carrier_operator,
-      service_code: pathText(offre, 'service', 'code') ?? order.carrier_service,
-      service_label: pathText(offre, 'service', 'label') ?? order.carrier_service,
-      cost_amount: cents(pathText(offre, 'price', 'tax-inclusive')),
+      operator_code: pathText(confirmation, 'operator', 'code') ?? order.carrier_operator,
+      operator_label: pathText(confirmation, 'operator', 'label') ?? order.carrier_operator,
+      service_code: pathText(confirmation, 'service', 'code') ?? order.carrier_service,
+      service_label: pathText(confirmation, 'service', 'label') ?? order.carrier_service,
+      cost_amount: cents(pathText(confirmation, 'price', 'tax-inclusive')),
+      dropoff_code: dropoffCode ?? null,
+      dropoff_label: dropoffLabel ?? null,
     });
     if (insertError) throw new Error(insertError.message);
 
@@ -156,7 +212,7 @@ Deno.serve(async (request) => {
     return json({
       reference,
       label_url: await signedLabel(db, order.id),
-      operator_label: pathText(offre, 'operator', 'label') ?? order.carrier_operator,
+      operator_label: pathText(confirmation, 'operator', 'label') ?? order.carrier_operator,
       reused: false,
     });
   } catch (error) {

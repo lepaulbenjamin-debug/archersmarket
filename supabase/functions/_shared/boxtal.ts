@@ -207,6 +207,43 @@ export const parcelOf = (size: string | null | undefined): Parcel =>
 /** Code catégorie Boxtal : « articles de sport ». */
 export const CONTENU_SPORT = 10120;
 
+/**
+ * Les paramètres que l'on sait fournir à la commande.
+ *
+ * Relevé sur une vraie cotation : chaque offre annonce ce qu'elle exigera, et
+ * les exigences varient d'un transporteur à l'autre. Plutôt que de découvrir
+ * un manque au moment d'acheter l'étiquette — trop tard, l'acheteur a déjà
+ * payé — on écarte à la cotation toute offre réclamant autre chose que ceci.
+ *
+ * `type_emballage.emballage` en est volontairement absent : trois offres sur
+ * vingt-six le demandent, et nous ne savons pas quel emballage le vendeur
+ * utilisera.
+ */
+const PARAMETRES_CONNUS = new Set([
+  'colis.description', 'colis.valeur',
+  'expediteur.civilite', 'expediteur.nom', 'expediteur.prenom',
+  'expediteur.adresse', 'expediteur.email', 'expediteur.telephone',
+  'destinataire.civilite', 'destinataire.nom', 'destinataire.prenom',
+  'destinataire.adresse', 'destinataire.email', 'destinataire.telephone',
+  'depot.pointrelais', 'retrait.pointrelais',
+]);
+
+/** L'offre ne réclame-t-elle que des choses que nous savons donner ? */
+export const offreRealisable = (offer: Offer): boolean =>
+  offer.mandatory.every((code) => PARAMETRES_CONNUS.has(code));
+
+/**
+ * Point de retrait, choisi par l'acheteur. On se fie à ce que l'offre déclare
+ * exiger, pas à son type de livraison : une offre Colissimo livre en
+ * « PickupStation » sans jamais réclamer de point de retrait.
+ */
+export const exigePointRetrait = (offer: Offer): boolean =>
+  offer.mandatory.includes('retrait.pointrelais');
+
+/** Point de dépôt, choisi par le vendeur : là où il remet le colis. */
+export const exigePointDepot = (offer: Offer): boolean =>
+  offer.mandatory.includes('depot.pointrelais');
+
 /** Aplatit un colis en paramètres `colis_1.*`. */
 export const parcelParams = (parcel: Parcel): BoxtalParams => ({
   'colis_1.poids': parcel.poids,

@@ -13,8 +13,9 @@ import { Header, Screen } from '@/components/Screen';
 import { createCheckout, formatCents, priceBreakdown, toCents } from '@/services/payments';
 import {
   fetchOffers, fetchRelayPoints, needsRelay,
-  type DeliveryAddress, type RelayPoint, type ShippingOffer,
+  type Civility, type DeliveryAddress, type RelayPoint, type ShippingOffer,
 } from '@/services/shipping';
+import { CivilityPicker } from '@/components/CivilityPicker';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
 import { colors, radius, spacing } from '@/theme';
@@ -37,6 +38,7 @@ export default function CheckoutScreen() {
   const listing = useMemo(() => listings.find((item) => item.id === id), [listings, id]);
 
   const [address, setAddress] = useState<DeliveryAddress>({
+    civility: 'M',
     name: user?.name ?? '',
     address: '',
     zip: '',
@@ -90,7 +92,7 @@ export default function CheckoutScreen() {
     if (!needsRelay(candidate)) return;
     setBusy('points');
     try {
-      setPoints(await fetchRelayPoints(candidate.operatorCode, address));
+      setPoints(await fetchRelayPoints(candidate, address, 'pickup'));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -114,6 +116,7 @@ export default function CheckoutScreen() {
     try {
       const { orderId, clientSecret } = await createCheckout(id, {
         mode: handDelivery ? 'hand' : needsRelay(offer!) ? 'relay' : 'home',
+        civility: address.civility,
         name: address.name,
         address: address.address,
         zip: address.zip,
@@ -198,6 +201,10 @@ export default function CheckoutScreen() {
           {!handDelivery && (
             <>
               <Text style={styles.section}>Où livrer</Text>
+              <CivilityPicker
+                value={address.civility}
+                onChange={(civility: Civility) => setAddress((prev) => ({ ...prev, civility }))}
+              />
               <Field
                 label="Nom et prénom"
                 value={address.name}

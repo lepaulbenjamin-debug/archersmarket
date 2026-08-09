@@ -22,6 +22,7 @@ import { Rating } from '@/components/Rating';
 import { ReportSheet } from '@/components/ReportSheet';
 import { Screen } from '@/components/Screen';
 import { categoryById, conditionById, handednessLabel } from '@/data/catalog';
+import { parcelLabel } from '@/services/shipping';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
@@ -97,14 +98,15 @@ export default function ListingScreen() {
   if (listing.drawLength) specs.push(['Allonge', `${listing.drawLength}"`]);
   if (listing.spine) specs.push(['Spine', `${listing.spine}`]);
   if (listing.size) specs.push(['Taille', listing.size]);
+  // Le port n'est plus un forfait annoncé par le vendeur : il est coté par
+  // les transporteurs au moment de l'achat, pour l'adresse de l'acheteur.
   specs.push([
     'Livraison',
-    listing.shipping
-      ? listing.shippingPrice
-        ? `Envoi ${formatPrice(listing.shippingPrice)}`
-        : 'Envoi possible, frais à convenir'
-      : 'Remise en main propre',
+    listing.shipping ? 'Envoi possible, tarif calculé à l’achat' : 'Remise en main propre',
   ]);
+  if (listing.shipping && listing.parcelSize) {
+    specs.push(['Format du colis', parcelLabel(listing.parcelSize)]);
+  }
 
   const contactSeller = async () => {
     if (!user) {

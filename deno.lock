@@ -1,0 +1,45 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@supabase/supabase-js@2": "2.112.2"
+  },
+  "jsr": {
+    "@supabase/supabase-js@2.112.2": {
+      "integrity": "6462b34553f02db1534f534318b0abf46a4d20994e93725233dab75ebbf78b7f"
+    }
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@expo/metro-runtime@~57.0.8",
+        "npm:@expo/vector-icons@^15.0.2",
+        "npm:@react-native-async-storage/async-storage@2.2.0",
+        "npm:@stripe/stripe-react-native@0.73",
+        "npm:@supabase/supabase-js@^2.112.2",
+        "npm:@types/react@~19.2.2",
+        "npm:expo-apple-authentication@~57.0.1",
+        "npm:expo-constants@~57.0.9",
+        "npm:expo-device@~57.0.1",
+        "npm:expo-file-system@~57.0.2",
+        "npm:expo-image-picker@~57.0.7",
+        "npm:expo-image@~57.0.2",
+        "npm:expo-linking@~57.0.5",
+        "npm:expo-notifications@~57.0.9",
+        "npm:expo-router@~57.0.10",
+        "npm:expo-status-bar@~57.0.1",
+        "npm:expo-web-browser@~57.0.2",
+        "npm:expo@~57.0.10",
+        "npm:react-dom@19.2.3",
+        "npm:react-native-gesture-handler@2.32",
+        "npm:react-native-safe-area-context@5.7",
+        "npm:react-native-screens@4.26",
+        "npm:react-native-url-polyfill@4",
+        "npm:react-native-web@~0.21.2",
+        "npm:react-native-webview@13.16.1",
+        "npm:react-native@0.86.2",
+        "npm:react@19.2.3",
+        "npm:typescript@~6.0.3"
+      ]
+    }
+  }
+}

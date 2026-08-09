@@ -39,7 +39,9 @@ function RootNavigator() {
       <Stack.Screen name="orders" />
       <Stack.Screen name="account/payment" />
       <Stack.Screen name="account/setup" />
+      <Stack.Screen name="account/address" />
       <Stack.Screen name="order/[id]" />
+      <Stack.Screen name="checkout/[id]" />
       <Stack.Screen name="login" options={{ presentation: 'modal' }} />
       <Stack.Screen name="forgot-password" options={{ presentation: 'modal' }} />
       <Stack.Screen name="register" options={{ presentation: 'modal' }} />

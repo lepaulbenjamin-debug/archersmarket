@@ -76,6 +76,8 @@ export interface Order {
   protectionAmount: Cents;
   totalAmount: Cents;
   status: OrderStatus;
+  shippingMode: 'home' | 'relay' | 'hand';
+  relayLabel?: string;
   trackingCarrier?: string;
   trackingNumber?: string;
   paidAt?: string;
@@ -96,6 +98,8 @@ interface OrderRow {
   protection_amount: number;
   total_amount: number;
   status: OrderStatus;
+  shipping_mode: 'home' | 'relay' | 'hand';
+  relay_label: string | null;
   tracking_carrier: string | null;
   tracking_number: string | null;
   paid_at: string | null;
@@ -116,6 +120,8 @@ const toOrder = (row: OrderRow): Order => ({
   protectionAmount: row.protection_amount,
   totalAmount: row.total_amount,
   status: row.status,
+  shippingMode: row.shipping_mode,
+  relayLabel: row.relay_label ?? undefined,
   trackingCarrier: row.tracking_carrier ?? undefined,
   trackingNumber: row.tracking_number ?? undefined,
   paidAt: row.paid_at ?? undefined,
@@ -126,7 +132,7 @@ const toOrder = (row: OrderRow): Order => ({
 });
 
 const ORDER_SELECT =
-  'id, listing_id, listing_title, buyer_id, seller_id, item_amount, shipping_amount, protection_amount, total_amount, status, tracking_carrier, tracking_number, paid_at, shipped_at, delivered_at, released_at, created_at';
+  'id, listing_id, listing_title, buyer_id, seller_id, item_amount, shipping_amount, protection_amount, total_amount, status, shipping_mode, relay_label, tracking_carrier, tracking_number, paid_at, shipped_at, delivered_at, released_at, created_at';
 
 /** Les commandes du membre connecté, achats et ventes confondus. */
 export async function fetchOrders(): Promise<Order[]> {
@@ -259,13 +265,35 @@ export interface Checkout {
   breakdown?: PriceBreakdown;
 }
 
+/** Le choix de livraison transmis au paiement. */
+export interface CheckoutDelivery {
+  mode: 'home' | 'relay' | 'hand';
+  name?: string;
+  address?: string;
+  zip?: string;
+  city?: string;
+  country?: string;
+  phone?: string;
+  operator?: string;
+  service?: string;
+  relayCode?: string;
+  relayLabel?: string;
+}
+
 /**
  * Prépare le paiement d'une annonce. Les montants renvoyés font foi : ceux
  * affichés avant l'achat ne sont qu'une estimation.
+ *
+ * Le tarif du port n'est pas transmis, seulement l'offre retenue : la
+ * fonction Edge la recote elle-même. Envoyer le prix reviendrait à laisser
+ * l'acheteur fixer son propre port.
  */
-export async function createCheckout(listingId: string): Promise<Checkout> {
+export async function createCheckout(
+  listingId: string,
+  delivery: CheckoutDelivery = { mode: 'hand' },
+): Promise<Checkout> {
   const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-    body: { listingId },
+    body: { listingId, delivery },
   });
   if (error) throw new Error(await edgeMessage(error, 'Paiement impossible pour le moment.'));
   const payload = data as { orderId?: string; clientSecret?: string; error?: string; breakdown?: PriceBreakdown };

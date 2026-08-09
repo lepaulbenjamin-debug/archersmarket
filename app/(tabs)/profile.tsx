@@ -235,6 +235,21 @@ export default function ProfileScreen() {
 
           <Pressable
             accessibilityRole="button"
+            onPress={() => router.push('/account/address')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="package-variant-closed" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Adresse d’expédition</Text>
+              <Text style={styles.settingHint}>
+                D’où partent vos colis. Elle reste privée et sert à éditer vos étiquettes.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
             onPress={() => router.push('/account/blocked')}
             style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
           >

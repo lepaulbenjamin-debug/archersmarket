@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 
 import { BrandPicker } from '@/components/BrandPicker';
+import { PARCEL_SIZES, suggestedParcel, type ParcelSize } from '@/services/shipping';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
@@ -53,12 +54,23 @@ export default function SellScreen() {
   const [city, setCity] = useState(user?.city ?? '');
   const [shipping, setShipping] = useState(true);
   const [shippingPrice, setShippingPrice] = useState('');
+  const [parcelSize, setParcelSize] = useState<ParcelSize>(suggestedParcel('bow-recurve'));
   const [photos, setPhotos] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [imported, setImported] = useState(false);
 
   const activeCategory = useMemo(() => categoryById(category), [category]);
+
+  /**
+   * Changer de catégorie repropose un format cohérent — des flèches ne
+   * s'expédient pas dans le carton d'un viseur. Le vendeur reste libre de le
+   * corriger ensuite : c'est une suggestion, pas une règle.
+   */
+  const choisirCategorie = useCallback((next: CategoryId) => {
+    setCategory(next);
+    setParcelSize(suggestedParcel(next));
+  }, []);
 
   /**
    * Un import déposé par l'écran « Importer une annonce » remplit le formulaire.
@@ -76,7 +88,7 @@ export default function SellScreen() {
       if (draft.description) setDescription(draft.description);
       if (draft.price) setPrice(String(draft.price));
       if (draft.city) setCity(draft.city);
-      if (draft.category) setCategory(draft.category);
+      if (draft.category) choisirCategorie(draft.category);
       if (draft.brand) setBrand(draft.brand);
       if (draft.condition) setCondition(draft.condition);
       if (draft.handedness) setHandedness(draft.handedness);
@@ -92,7 +104,7 @@ export default function SellScreen() {
 
       setErrors({});
       setImported(true);
-    }, [user]),
+    }, [user, choisirCategorie]),
   );
 
   if (!user) {
@@ -168,6 +180,7 @@ export default function SellScreen() {
         city: city.trim(),
         shipping,
         shippingPrice: shipping ? Number(shippingPrice.replace(',', '.')) || undefined : undefined,
+        parcelSize: shipping ? parcelSize : undefined,
         photos,
       });
       setTitle('');
@@ -277,7 +290,7 @@ export default function SellScreen() {
                   label={item.short}
                   icon={item.icon}
                   selected={category === item.id}
-                  onPress={() => setCategory(item.id)}
+                  onPress={() => choisirCategorie(item.id)}
                 />
               ))}
             </View>
@@ -379,14 +392,37 @@ export default function SellScreen() {
           </View>
 
           {shipping ? (
-            <Field
-              label="Frais de port (€)"
-              placeholder="ex. 12"
-              keyboardType="numeric"
-              value={shippingPrice}
-              onChangeText={setShippingPrice}
-              hint="Laissez vide si les frais sont à convenir."
-            />
+            <View style={styles.parcel}>
+              <Text style={styles.switchLabel}>Format du colis</Text>
+              <Text style={styles.switchHint}>
+                Il décide des transporteurs proposés : une paire de branches ne passe pas
+                partout. L’acheteur paie le tarif réel, vous n’avancez rien.
+              </Text>
+              <View style={styles.parcelGrid}>
+                {PARCEL_SIZES.map((preset) => {
+                  const actif = parcelSize === preset.value;
+                  return (
+                    <Pressable
+                      key={preset.value}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: actif }}
+                      onPress={() => setParcelSize(preset.value)}
+                      style={[styles.parcelChip, actif && styles.parcelChipActive]}
+                    >
+                      <Text style={[styles.parcelLabel, actif && styles.parcelLabelActive]}>
+                        {preset.label}
+                      </Text>
+                      <Text style={[styles.parcelHint, actif && styles.parcelHintActive]}>
+                        {preset.hint}
+                      </Text>
+                      <Text style={[styles.parcelHint, actif && styles.parcelHintActive]}>
+                        {preset.detail}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
           ) : null}
 
           <Button
@@ -421,6 +457,18 @@ function Group({
 }
 
 const styles = StyleSheet.create({
+  parcel: { gap: 6 },
+  parcelGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
+  parcelChip: {
+    flexGrow: 1, flexBasis: '46%', gap: 2,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: 10,
+  },
+  parcelChipActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  parcelLabel: { fontSize: 14, fontWeight: '700', color: colors.text },
+  parcelLabelActive: { color: colors.primaryDark },
+  parcelHint: { fontSize: 11, color: colors.textFaint },
+  parcelHintActive: { color: colors.textMuted },
   flex: { flex: 1 },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl * 2, gap: spacing.xl },
   group: { gap: spacing.sm },

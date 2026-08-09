@@ -69,6 +69,8 @@ export interface Listing {
   city: string;
   shipping: boolean;
   shippingPrice?: number;
+  /** Format d'expédition annoncé par le vendeur, pour coter le transport. */
+  parcelSize?: 'small' | 'medium' | 'long' | 'xl';
   /** URL publique des photos, ou clé de visuel de catégorie si l'annonce n'en a pas. */
   images: string[];
   status: ListingStatus;
@@ -166,6 +168,8 @@ export interface NewListingInput {
   city: string;
   shipping: boolean;
   shippingPrice?: number;
+  /** Format d'expédition, qui décide des transporteurs proposés à l'acheteur. */
+  parcelSize?: 'small' | 'medium' | 'long' | 'xl';
   /** URI locales des photos choisies dans la galerie. */
   photos?: string[];
 }

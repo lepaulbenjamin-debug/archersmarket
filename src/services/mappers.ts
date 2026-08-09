@@ -37,6 +37,7 @@ export interface ListingRow {
   city: string;
   shipping: boolean;
   shipping_price: number | string | null;
+  parcel_size: 'small' | 'medium' | 'long' | 'xl' | null;
   status: Listing['status'];
   views: number;
   created_at: string;
@@ -123,6 +124,7 @@ export function toListing(row: ListingRow): Listing {
     city: row.city,
     shipping: row.shipping,
     shippingPrice: num(row.shipping_price),
+    parcelSize: row.parcel_size ?? undefined,
     // Sans photo, l'app retombe sur le visuel de la catégorie.
     images: photos.length ? photos : [row.category],
     status: row.status,

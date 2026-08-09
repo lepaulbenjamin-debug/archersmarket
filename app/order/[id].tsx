@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -16,6 +17,7 @@ import {
   statusLabel,
   type Order,
 } from '@/services/payments';
+import { createLabel, fetchShipment, type Shipment } from '@/services/shipping';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 
@@ -35,14 +37,18 @@ export default function OrderScreen() {
   const { user } = useAuth();
 
   const [order, setOrder] = useState<Order | null>(null);
+  const [shipment, setShipment] = useState<Shipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [labelling, setLabelling] = useState(false);
   const [carrier, setCarrier] = useState('');
   const [tracking, setTracking] = useState('');
 
   const load = useCallback(async () => {
     try {
-      setOrder(await fetchOrder(id));
+      const [commande, expedition] = await Promise.all([fetchOrder(id), fetchShipment(id)]);
+      setOrder(commande);
+      setShipment(expedition);
     } catch (error) {
       Alert.alert('Commande indisponible', (error as Error).message);
     } finally {
@@ -84,6 +90,34 @@ export default function OrderScreen() {
       Alert.alert(echec, (error as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  // L'étiquette est payée par la plateforme avec le port déjà encaissé : le
+  // vendeur n'a rien à avancer. Deux appuis ne l'achètent pas deux fois — la
+  // fonction Edge rend la même expédition.
+  const editerEtiquette = async () => {
+    setLabelling(true);
+    try {
+      const { labelUrl } = await createLabel(order.id);
+      await load();
+      if (labelUrl) await WebBrowser.openBrowserAsync(labelUrl);
+    } catch (error) {
+      Alert.alert('Étiquette indisponible', (error as Error).message);
+    } finally {
+      setLabelling(false);
+    }
+  };
+
+  const ouvrirEtiquette = async () => {
+    setLabelling(true);
+    try {
+      const { labelUrl } = await createLabel(order.id);
+      if (labelUrl) await WebBrowser.openBrowserAsync(labelUrl);
+    } catch (error) {
+      Alert.alert('Étiquette indisponible', (error as Error).message);
+    } finally {
+      setLabelling(false);
     }
   };
 
@@ -179,11 +213,28 @@ export default function OrderScreen() {
           <Ligne
             label={side === 'buyer' ? 'Total payé' : 'Vous recevez'}
             value={formatCents(
-              side === 'buyer' ? order.totalAmount : order.itemAmount + order.shippingAmount,
+              side === 'buyer'
+                ? order.totalAmount
+                : // Le port ne revient au vendeur que s'il expédie par ses
+                  // propres moyens : quand la plateforme achète l'étiquette,
+                  // elle a déjà payé le transporteur avec cet argent.
+                  order.itemAmount + (shipment ? 0 : order.shippingAmount),
             )}
             fort
           />
+          {side === 'seller' && shipment ? (
+            <Text style={styles.aide}>
+              Les frais de port ont servi à payer votre étiquette.
+            </Text>
+          ) : null}
         </View>
+
+        {order.relayLabel ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Point relais</Text>
+            <Text style={styles.suivi}>{order.relayLabel}</Text>
+          </View>
+        ) : null}
 
         {order.trackingNumber ? (
           <View style={styles.card}>
@@ -197,27 +248,73 @@ export default function OrderScreen() {
 
         {/* Actions du vendeur */}
         {side === 'seller' && order.status === 'paid' ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Déclarer l’envoi</Text>
-            <Text style={styles.aide}>
-              Le numéro de suivi n’est pas obligatoire, mais c’est lui qui vous protège en cas de
-              contestation.
-            </Text>
-            <Field
-              label="Transporteur"
-              placeholder="ex. Mondial Relay"
-              value={carrier}
-              onChangeText={setCarrier}
-            />
-            <Field
-              label="Numéro de suivi"
-              placeholder="ex. 6A12345678"
-              value={tracking}
-              onChangeText={setTracking}
-              autoCapitalize="characters"
-            />
-            <Button label="J’ai expédié" icon="truck-fast-outline" onPress={declarerEnvoi} loading={busy} />
-          </View>
+          order.shippingMode !== 'hand' ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Expédier</Text>
+              {shipment ? (
+                <>
+                  <Text style={styles.aide}>
+                    {shipment.operatorLabel} · {shipment.serviceLabel}
+                    {shipment.trackingNumber ? `\nSuivi ${shipment.trackingNumber}` : ''}
+                  </Text>
+                  <Button
+                    label="Revoir l’étiquette"
+                    variant="secondary"
+                    icon="file-pdf-box"
+                    onPress={ouvrirEtiquette}
+                    loading={labelling}
+                  />
+                  <Button
+                    label="J’ai déposé le colis"
+                    icon="truck-fast-outline"
+                    onPress={() => run(() => markShipped(order.id), 'Déclaration impossible')}
+                    loading={busy}
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.aide}>
+                    L’étiquette est déjà payée par les frais de port. Imprimez-la, collez-la sur le
+                    colis, et déposez-le.
+                  </Text>
+                  <Button
+                    label="Éditer l’étiquette"
+                    icon="printer-outline"
+                    onPress={editerEtiquette}
+                    loading={labelling}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push('/account/address')}
+                    hitSlop={6}
+                  >
+                    <Text style={styles.lien}>Modifier mon adresse d’expédition</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          ) : (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Déclarer la remise</Text>
+              <Text style={styles.aide}>
+                Cette vente se fait en main propre. Confirmez une fois le matériel remis.
+              </Text>
+              <Field
+                label="Transporteur"
+                placeholder="ex. Mondial Relay"
+                value={carrier}
+                onChangeText={setCarrier}
+              />
+              <Field
+                label="Numéro de suivi"
+                placeholder="ex. 6A12345678"
+                value={tracking}
+                onChangeText={setTracking}
+                autoCapitalize="characters"
+              />
+              <Button label="C’est remis" icon="handshake-outline" onPress={declarerEnvoi} loading={busy} />
+            </View>
+          )
         ) : null}
 
         {/* Actions de l'acheteur */}

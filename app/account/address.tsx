@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { AddressField } from '@/components/AddressField';
 import { Field } from '@/components/Field';
 import { Header, Screen } from '@/components/Screen';
 import { fetchSellerAddress, saveSellerAddress, type Civility, type SellerAddress } from '@/services/shipping';
@@ -87,12 +88,18 @@ export default function SellerAddressScreen() {
             autoComplete="name"
             editable={!loading}
           />
-          <Field
-            label="Adresse"
+          <AddressField
             placeholder="12 rue des Archers"
             value={form.address}
             onChangeText={(address) => setForm((prev) => ({ ...prev, address }))}
-            autoComplete="street-address"
+            onSelect={(choix) =>
+              setForm((prev) => ({
+                ...prev,
+                address: choix.street,
+                zip: choix.zip,
+                city: choix.city,
+              }))
+            }
             editable={!loading}
           />
           <View style={styles.row}>

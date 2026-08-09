@@ -14,9 +14,11 @@ import {
   createCheckout, formatCents, handoverBreakdown, priceBreakdown, toCents,
 } from '@/services/payments';
 import {
-  fetchOffers, fetchRelayPoints, needsRelay,
+  fetchOffers, fetchRelayPoints, fetchSellerAddress, needsRelay,
   type Civility, type DeliveryAddress, type RelayPoint, type ShippingOffer,
 } from '@/services/shipping';
+import { AddressField } from '@/components/AddressField';
+import { RelayPointPicker } from '@/components/RelayPointPicker';
 import { CivilityPicker } from '@/components/CivilityPicker';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
@@ -61,6 +63,37 @@ export default function CheckoutScreen() {
   const [handDelivery, setHandDelivery] = useState(true);
   const [busy, setBusy] = useState<'offers' | 'points' | 'pay' | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * L'adresse enregistrée dans le compte sert de point de départ. C'est la
+   * même personne et la même boîte aux lettres : la resaisir à chaque achat
+   * n'apporte rien, sinon des fautes de frappe.
+   */
+  useEffect(() => {
+    let vivant = true;
+    fetchSellerAddress()
+      .then((mienne) => {
+        if (!vivant || !mienne) return;
+        setAddress((prev) =>
+          // On ne recouvre pas ce que l'acheteur a déjà commencé à taper.
+          prev.address.trim() || prev.zip.trim()
+            ? prev
+            : {
+                civility: mienne.civility,
+                name: mienne.fullName,
+                address: mienne.address,
+                zip: mienne.zip,
+                city: mienne.city,
+                country: mienne.country,
+                phone: mienne.phone,
+              },
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      vivant = false;
+    };
+  }, []);
 
   const adresseComplete =
     address.name.trim().length > 2 &&
@@ -236,12 +269,19 @@ export default function CheckoutScreen() {
                 onChangeText={(name) => setAddress((prev) => ({ ...prev, name }))}
                 autoComplete="name"
               />
-              <Field
-                label="Adresse"
+              <AddressField
                 placeholder="12 rue des Archers"
                 value={address.address}
                 onChangeText={(value) => setAddress((prev) => ({ ...prev, address: value }))}
-                autoComplete="street-address"
+                onSelect={(choix) =>
+                  setAddress((prev) => ({
+                    ...prev,
+                    address: choix.street,
+                    zip: choix.zip,
+                    city: choix.city,
+                  }))
+                }
+                hint="Choisissez dans la liste : le code postal et la ville se remplissent seuls."
               />
               <View style={styles.row}>
                 <Field
@@ -314,21 +354,11 @@ export default function CheckoutScreen() {
                   {busy === 'points' ? (
                     <ActivityIndicator color={colors.primary} />
                   ) : (
-                    (points ?? []).map((candidate) => (
-                      <Pressable
-                        key={candidate.code}
-                        accessibilityRole="button"
-                        onPress={() => setPoint(candidate)}
-                        style={[styles.offer, point?.code === candidate.code && styles.offerActive]}
-                      >
-                        <View style={styles.flex}>
-                          <Text style={styles.offerName}>{candidate.name}</Text>
-                          <Text style={styles.offerService}>
-                            {candidate.address}, {candidate.zip} {candidate.city}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    ))
+                    <RelayPointPicker
+                      points={points ?? []}
+                      selected={point}
+                      onSelect={setPoint}
+                    />
                   )}
                 </>
               )}

@@ -150,6 +150,15 @@ export const needsRelay = (offer: ShippingOffer): boolean =>
 export const needsDropoff = (offer: ShippingOffer): boolean =>
   offer.mandatory.includes('depot.pointrelais');
 
+export interface RelayOpeningDay {
+  /** 1 = lundi … 7 = dimanche. */
+  weekday: number;
+  openAm: string | null;
+  closeAm: string | null;
+  openPm: string | null;
+  closePm: string | null;
+}
+
 export interface RelayPoint {
   code: string;
   name: string;
@@ -157,6 +166,11 @@ export interface RelayPoint {
   zip: string;
   city: string;
   country: string;
+  /** Absentes chez certains transporteurs : la carte se passe alors du point. */
+  latitude: number | null;
+  longitude: number | null;
+  phone: string | null;
+  hours: RelayOpeningDay[];
 }
 
 /**

@@ -10,7 +10,7 @@
  * fait rejeter.
  */
 import { CORS, callerId, json } from '../_shared/context.ts';
-import { boxtalGet, findAll, pathText } from '../_shared/boxtal.ts';
+import { boxtalGet, findAll, path, pathText } from '../_shared/boxtal.ts';
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -30,6 +30,11 @@ Deno.serve(async (request) => {
       ville: String(city),
     });
 
+    const nombre = (valeur: string | null): number | null => {
+      const n = valeur ? Number(valeur.replace(',', '.')) : NaN;
+      return Number.isFinite(n) && n !== 0 ? n : null;
+    };
+
     const points = findAll(document, 'point')
       .map((point) => ({
         code: pathText(point, 'code') ?? '',
@@ -38,6 +43,23 @@ Deno.serve(async (request) => {
         zip: pathText(point, 'zipcode') ?? '',
         city: pathText(point, 'city') ?? '',
         country: pathText(point, 'country') ?? 'FR',
+        // Boxtal les donne, et c'est ce qui permet de montrer une carte
+        // plutôt qu'une liste d'adresses que personne ne situe.
+        latitude: nombre(pathText(point, 'latitude')),
+        longitude: nombre(pathText(point, 'longitude')),
+        phone: pathText(point, 'phone'),
+        // Les horaires, jour par jour. Un point relais fermé le lundi n'est
+        // pas un détail quand on choisit où retirer son arc.
+        hours: (path(point, 'schedule')?.children ?? [])
+          .filter((jour) => jour.name === 'day')
+          .map((jour) => ({
+            weekday: Number(pathText(jour, 'weekday') ?? 0),
+            openAm: pathText(jour, 'open_am'),
+            closeAm: pathText(jour, 'close_am'),
+            openPm: pathText(jour, 'open_pm'),
+            closePm: pathText(jour, 'close_pm'),
+          }))
+          .filter((jour) => jour.weekday >= 1 && jour.weekday <= 7),
       }))
       .filter((point) => point.code && point.name);
 

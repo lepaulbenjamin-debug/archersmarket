@@ -70,7 +70,7 @@ const ECRANS = [
       'Un arc doit vous aller. Tirez quelques volées avant de valider — ou faites-le venir, même en 130 cm.',
     points: [
       '0,99 € en main propre, avec un code donné après essai',
-      'À distance : le port est demandé aux transporteurs, l’étiquette est prête',
+      'Des frais dégressifs : 5 % jusqu’à 300 €, puis 2,5 %',
       'Aucun plafond, là où ailleurs la protection s’arrête à 2 500 €',
     ],
   },

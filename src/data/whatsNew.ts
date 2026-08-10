@@ -14,9 +14,14 @@ export interface Nouveautes {
 }
 
 export const NOUVEAUTES: Nouveautes = {
-  version: 1,
+  version: 2,
   titre: 'Acheter et vendre vient de changer',
   points: [
+    {
+      icon: 'sale',
+      texte:
+        'Les frais de protection deviennent dégressifs : 5 % jusqu’à 300 €, puis 2,5 %. Un arc à 1 000 € passe de 50,70 € à 33,20 € de frais.',
+    },
     {
       icon: 'handshake-outline',
       texte:

@@ -12,6 +12,9 @@ import { fail, supabase } from '@/services/supabase';
 export type Cents = number;
 
 export const PROTECTION_RATE = 0.05;
+/** Au-delà de 300 €, le taux tombe à 2,5 %. */
+export const PROTECTION_RATE_HIGH = 0.025;
+export const PROTECTION_TIER: Cents = 30000;
 export const PROTECTION_FIXED: Cents = 70;
 
 /**
@@ -24,15 +27,27 @@ export const PROTECTION_FIXED: Cents = 70;
 export const HANDOVER_FEE: Cents = 99;
 
 /**
- * Frais de protection à la charge de l'acheteur : 5 % du prix + 0,70 €.
- * Le vendeur touche son prix entier.
+ * Frais de protection à la charge de l'acheteur, dégressifs : 0,70 € fixes,
+ * 5 % jusqu'à 300 €, puis 2,5 % au-delà. Le vendeur touche son prix entier.
+ *
+ * Le taux décroît parce qu'un pourcentage linéaire est calibré pour des
+ * vêtements à quinze euros. Sur un arc à mille deux cents, il produirait
+ * soixante euros de frais — soit exactement l'argument qui pousse un acheteur
+ * à proposer un virement en dehors de l'application.
  *
  * Cette règle existe aussi en base (fonction `protection_fee`), qui fait foi
  * au moment de l'encaissement. Ici, c'est pour l'afficher avant l'achat ; un
  * test vérifie que les deux ne divergent jamais.
  */
 export function protectionFee(itemAmount: Cents): Cents {
-  return Math.max(0, Math.round(itemAmount * PROTECTION_RATE) + PROTECTION_FIXED);
+  const basse = Math.min(Math.max(0, itemAmount), PROTECTION_TIER);
+  const haute = Math.max(0, itemAmount - PROTECTION_TIER);
+  return Math.max(
+    0,
+    PROTECTION_FIXED +
+      Math.round(basse * PROTECTION_RATE) +
+      Math.round(haute * PROTECTION_RATE_HIGH),
+  );
 }
 
 export interface PriceBreakdown {

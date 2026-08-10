@@ -7,7 +7,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Onboarding } from '@/components/Onboarding';
-import { hasSeenOnboarding, markOnboardingSeen } from '@/services/onboarding';
+import { WhatsNew } from '@/components/WhatsNew';
+import { NOUVEAUTES } from '@/data/whatsNew';
+import {
+  hasSeenOnboarding, lastSeenNews, markNewsSeen, markOnboardingSeen,
+} from '@/services/onboarding';
 import { colors } from '@/theme';
 import { AuthProvider, useAuth } from '@/store/AuthContext';
 import { ListingsProvider } from '@/store/ListingsContext';
@@ -21,15 +25,30 @@ function RootNavigator() {
   // `null` tant qu'on ne sait pas : afficher l'accueil puis le retirer
   // aussitôt donnerait un clignotement à chaque lancement.
   const [accueilVu, setAccueilVu] = useState<boolean | null>(null);
+  const [nouveautes, setNouveautes] = useState(false);
 
   useEffect(() => {
-    hasSeenOnboarding().then(setAccueilVu);
+    Promise.all([hasSeenOnboarding(), lastSeenNews()]).then(([vu, dernier]) => {
+      setAccueilVu(vu);
+      // Les nouveautés ne s'annoncent qu'à qui connaissait déjà l'application.
+      // Les montrer juste après l'accueil reviendrait à répéter ce qu'on vient
+      // de lire, en moins bien.
+      setNouveautes(vu && dernier < NOUVEAUTES.version);
+    });
   }, []);
 
   const fermerAccueil = (creerCompte: boolean) => {
     setAccueilVu(true);
     markOnboardingSeen();
+    // Celui qui découvre l'application vient de tout lire : ses nouveautés
+    // sont déjà à jour.
+    markNewsSeen(NOUVEAUTES.version);
     if (creerCompte) router.push('/register');
+  };
+
+  const fermerNouveautes = () => {
+    setNouveautes(false);
+    markNewsSeen(NOUVEAUTES.version);
   };
 
   if (loading || accueilVu === null) {
@@ -75,6 +94,8 @@ function RootNavigator() {
           <Onboarding onDone={fermerAccueil} />
         </View>
       )}
+
+      <WhatsNew visible={nouveautes} onClose={fermerNouveautes} />
     </View>
   );
 }

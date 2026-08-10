@@ -76,6 +76,12 @@
         "projectId": "656990c6-e07c-4947-a61a-e2f4bcb5a08c"
       }
     },
-    "owner": "creaweb-conseil"
+    "owner": "creaweb-conseil",
+    "updates": {
+      "url": "https://u.expo.dev/656990c6-e07c-4947-a61a-e2f4bcb5a08c"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    }
   }
 }

@@ -109,6 +109,36 @@ est perdue, il faut en créer une autre dans App Store Connect → Utilisateurs
 et accès → Intégrations, et mettre `eas.json` à jour. L'identifiant d'émetteur
 (`ascApiKeyIssuerId`), lui, appartient à l'équipe et ne change pas.
 
+## Après ce build : les corrections sans recompiler
+
+Une fois cette version installée, tout changement qui ne touche que le
+JavaScript — un écran, un libellé, une règle d'affichage — peut partir sans
+recompiler ni repasser par Apple :
+
+```bash
+npx eas-cli update --branch production --message "ce qui change"
+```
+
+L'application récupère la mise à jour à son prochain démarrage. Cela ne
+consomme aucun build.
+
+Deux limites, et elles comptent.
+
+**Une dépendance native oblige à recompiler.** Ajouter une bibliothèque avec
+du code natif — une carte, un lecteur vidéo, un module de paiement — change la
+couche native, qu'une mise à jour à distance ne peut pas remplacer.
+
+C'est réglé par la politique `fingerprint` déclarée dans `app.json` : EAS
+calcule une empreinte de la couche native, et une mise à jour n'atteint que
+les installations dont l'empreinte correspond. Une version trop ancienne ne
+reçoit simplement rien, au lieu de recevoir du JavaScript réclamant un module
+absent et de planter au lancement.
+
+**Apple tolère ces mises à jour, mais pas n'importe lesquelles.** Corriger,
+ajuster, améliorer : oui. Changer ce que fait l'application ou contourner un
+refus de revue : non. Une fonctionnalité substantielle passe par une nouvelle
+version soumise.
+
 ## Ce qui reste chez EAS
 
 Les certificats de distribution et le profil de provisionnement restent

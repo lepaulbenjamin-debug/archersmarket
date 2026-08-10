@@ -1,0 +1,192 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useRef, useState } from 'react';
+import {
+  Dimensions, Pressable, ScrollView, StyleSheet, Text, View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Button } from '@/components/Button';
+import { Logo } from '@/components/Logo';
+import { colors, radius, spacing } from '@/theme';
+
+const { width } = Dimensions.get('window');
+
+/**
+ * Ce que l'accueil doit faire comprendre.
+ *
+ * Un archer qui vend son arc a déjà des endroits où le faire : les petites
+ * annonces généralistes, les groupes, les forums. La question n'est donc pas
+ * « voici nos fonctionnalités » mais « pourquoi ici plutôt qu'ailleurs ».
+ *
+ * D'où quatre écrans, un par différence réelle, et rien qu'on ne puisse
+ * tenir. Promettre ce qu'on ne fait pas se paie au premier litige.
+ */
+const ECRANS = [
+  {
+    icon: 'bullseye-arrow',
+    titre: 'Un marché fait pour le tir à l’arc',
+    texte:
+      'Poignées, branches, viseurs, décocheurs, tubes de flèches : dix-sept catégories et soixante-dix-huit marques.',
+    points: [
+      'On cherche par main d’arc, par puissance, par état',
+      'Les caractéristiques techniques figurent sur chaque annonce',
+      'Pas un arc rangé entre une raquette et un vélo d’appartement',
+    ],
+  },
+  {
+    icon: 'package-variant-closed',
+    titre: 'Une expédition qui tient compte de la longueur',
+    texte:
+      'Une paire de branches fait 90 cm, un arc en valise 130. C’est ce qui complique tout, et c’est prévu.',
+    points: [
+      'Une vingtaine d’offres comparées pour votre colis',
+      'Les transporteurs qui ne prennent pas la longueur sont écartés',
+      'Le vendeur imprime son étiquette, déjà réglée',
+    ],
+  },
+  {
+    icon: 'shield-check-outline',
+    titre: 'L’argent ne part qu’une fois l’arc reçu',
+    texte:
+      'À distance, votre paiement est conservé jusqu’à ce que vous confirmiez la réception.',
+    points: [
+      'En main propre : 0,99 €, et un code que vous ne donnez qu’après avoir essayé',
+      'Aucun plafond : un arc de compétition passe comme une corde à 20 €',
+      'Un litige gèle l’argent le temps qu’on regarde',
+    ],
+  },
+  {
+    icon: 'account-check-outline',
+    titre: 'Entre archers, pas entre inconnus',
+    texte:
+      'La confiance ne se décrète pas : elle se vérifie, et se surveille.',
+    points: [
+      'Identité contrôlée pour les vendeurs qui le souhaitent',
+      'Un avis après chaque vente, des deux côtés',
+      'Les tentatives de paiement hors de l’application sont signalées',
+    ],
+  },
+] as const;
+
+export function Onboarding({
+  onDone,
+}: {
+  onDone: (creerCompte: boolean) => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const defilement = useRef<ScrollView>(null);
+
+  const dernier = index === ECRANS.length - 1;
+
+  const suivant = () => {
+    if (dernier) {
+      onDone(true);
+      return;
+    }
+    defilement.current?.scrollTo({ x: (index + 1) * width, animated: true });
+  };
+
+  return (
+    <View style={styles.root}>
+      <SafeAreaView edges={['top']} style={styles.entete}>
+        <Logo size={30} wordSize={15} />
+        {/* Toujours accessible : forcer quatre écrans à quelqu'un qui veut
+            seulement regarder les annonces le fait désinstaller. */}
+        <Pressable accessibilityRole="button" onPress={() => onDone(false)} hitSlop={10}>
+          <Text style={styles.passer}>Passer</Text>
+        </Pressable>
+      </SafeAreaView>
+
+      <ScrollView
+        ref={defilement}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(event) =>
+          setIndex(Math.round(event.nativeEvent.contentOffset.x / width))
+        }
+      >
+        {ECRANS.map((ecran) => (
+          <View key={ecran.titre} style={styles.page}>
+            <View style={styles.rond}>
+              <MaterialCommunityIcons name={ecran.icon} size={46} color={colors.primary} />
+            </View>
+
+            <Text style={styles.titre}>{ecran.titre}</Text>
+            <Text style={styles.texte}>{ecran.texte}</Text>
+
+            <View style={styles.points}>
+              {ecran.points.map((point) => (
+                <View key={point} style={styles.point}>
+                  <MaterialCommunityIcons name="check" size={16} color={colors.primary} />
+                  <Text style={styles.pointTexte}>{point}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+
+      <SafeAreaView edges={['bottom']} style={styles.bas}>
+        <View style={styles.puces}>
+          {ECRANS.map((ecran, position) => (
+            <View
+              key={ecran.titre}
+              style={[styles.puce, position === index && styles.puceActive]}
+            />
+          ))}
+        </View>
+
+        <Button
+          label={dernier ? 'Créer mon compte' : 'Suivant'}
+          icon={dernier ? 'account-plus-outline' : undefined}
+          onPress={suivant}
+        />
+
+        {dernier ? (
+          <Pressable accessibilityRole="button" onPress={() => onDone(false)} hitSlop={8}>
+            <Text style={styles.regarder}>Regarder les annonces d’abord</Text>
+          </Pressable>
+        ) : null}
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
+  entete: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  passer: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
+  page: { width, paddingHorizontal: spacing.xl, paddingTop: spacing.xl, gap: spacing.md },
+  rond: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  titre: { fontSize: 25, fontWeight: '800', color: colors.text, lineHeight: 31 },
+  texte: { fontSize: 15, color: colors.textMuted, lineHeight: 22 },
+  points: { gap: spacing.sm, marginTop: spacing.sm },
+  point: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  pointTexte: { flex: 1, fontSize: 14, color: colors.text, lineHeight: 20 },
+  bas: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.md },
+  puces: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  puce: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.border },
+  puceActive: { backgroundColor: colors.primary, width: 20 },
+  regarder: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingBottom: spacing.sm,
+  },
+});

@@ -16,54 +16,62 @@ const { width } = Dimensions.get('window');
  *
  * Un archer qui vend son arc a déjà des endroits où le faire : les petites
  * annonces généralistes, les groupes, les forums. La question n'est donc pas
- * « voici nos fonctionnalités » mais « pourquoi ici plutôt qu'ailleurs ».
+ * « voici nos fonctionnalités » mais « qu'est-ce que j'y gagne, moi ».
  *
- * D'où quatre écrans, un par différence réelle, et rien qu'on ne puisse
- * tenir. Promettre ce qu'on ne fait pas se paie au premier litige.
+ * D'où quatre bénéfices et non quatre inventaires. « Dix-sept catégories,
+ * soixante-dix-huit marques » ne dit rien à personne ; « vous achetez
+ * compatible du premier coup », si.
+ *
+ * Les trois premiers écrans parlent à l'acheteur, qui vient d'installer et
+ * regarde. Le dernier s'adresse au vendeur, juste avant l'inscription : c'est
+ * de lui que ce marché a le plus besoin.
+ *
+ * Rien ici qu'on ne puisse tenir. Promettre ce qu'on ne fait pas se paie au
+ * premier litige.
  */
 const ECRANS = [
   {
     icon: 'bullseye-arrow',
-    titre: 'Un marché fait pour le tir à l’arc',
+    titre: 'Le matériel décrit comme vous en parlez',
     texte:
-      'Poignées, branches, viseurs, décocheurs, tubes de flèches : dix-sept catégories et soixante-dix-huit marques.',
+      'Une poignée 25 pouces, des branches courtes, un spine 500 : ici, chaque annonce le dit.',
     points: [
-      'On cherche par main d’arc, par puissance, par état',
-      'Les caractéristiques techniques figurent sur chaque annonce',
-      'Pas un arc rangé entre une raquette et un vélo d’appartement',
+      'Main d’arc, puissance, allonge, spine : écrits noir sur blanc',
+      'Vous filtrez dessus au lieu de fouiller trois cents annonces',
+      'Vous achetez compatible du premier coup',
+    ],
+  },
+  {
+    icon: 'handshake-outline',
+    titre: 'Essayez l’arc avant de le payer',
+    texte:
+      'Un arc doit vous aller. Retrouvez le vendeur à son club, tirez quelques volées, et ne validez qu’après.',
+    points: [
+      '0,99 € pour une remise tracée, quel que soit le prix de l’arc',
+      'Un code que vous ne donnez qu’une fois l’arc en main',
+      'Aucun plafond : de la corde à 20 € à l’arc de compétition',
     ],
   },
   {
     icon: 'package-variant-closed',
-    titre: 'Une expédition qui tient compte de la longueur',
+    titre: 'Ou faites-le livrer, même en 130 cm',
     texte:
-      'Une paire de branches fait 90 cm, un arc en valise 130. C’est ce qui complique tout, et c’est prévu.',
+      'Le port est demandé aux transporteurs pour votre colis, pas deviné au jugé par le vendeur.',
     points: [
-      'Une vingtaine d’offres comparées pour votre colis',
-      'Les transporteurs qui ne prennent pas la longueur sont écartés',
-      'Le vendeur imprime son étiquette, déjà réglée',
+      'Ceux qui ne prennent pas la longueur sont écartés d’office',
+      'L’étiquette est prête et déjà réglée : le vendeur n’avance rien',
+      'Votre paiement attend que vous ayez reçu l’arc',
     ],
   },
   {
-    icon: 'shield-check-outline',
-    titre: 'L’argent ne part qu’une fois l’arc reçu',
+    icon: 'hand-coin-outline',
+    titre: 'Vendre ne vous coûte rien',
     texte:
-      'À distance, votre paiement est conservé jusqu’à ce que vous confirmiez la réception.',
+      'Vous touchez votre prix entier : aucune commission n’est prélevée dessus.',
     points: [
-      'En main propre : 0,99 €, et un code que vous ne donnez qu’après avoir essayé',
-      'Aucun plafond : un arc de compétition passe comme une corde à 20 €',
-      'Un litige gèle l’argent le temps qu’on regarde',
-    ],
-  },
-  {
-    icon: 'account-check-outline',
-    titre: 'Entre archers, pas entre inconnus',
-    texte:
-      'La confiance ne se décrète pas : elle se vérifie, et se surveille.',
-    points: [
-      'Identité contrôlée pour les vendeurs qui le souhaitent',
-      'Un avis après chaque vente, des deux côtés',
-      'Les tentatives de paiement hors de l’application sont signalées',
+      'C’est l’acheteur qui règle la protection, pas vous',
+      'Vous vendez déjà ailleurs ? Collez le lien, l’annonce est reprise',
+      'Identité vérifiée et avis après vente : votre sérieux se voit',
     ],
   },
 ] as const;

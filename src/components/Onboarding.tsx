@@ -31,47 +31,47 @@ const { width } = Dimensions.get('window');
  */
 const ECRANS = [
   {
-    icon: 'bullseye-arrow',
-    titre: 'Le matériel décrit comme vous en parlez',
+    icon: 'filter-check-outline',
+    titre: 'Des filtres faits pour le tir à l’arc',
     texte:
-      'Une poignée 25 pouces, des branches courtes, un spine 500 : ici, chaque annonce le dit.',
+      'Gaucher, 38 livres, poignée 25 pouces : trois filtres et vous y êtes.',
     points: [
-      'Main d’arc, puissance, allonge, spine : écrits noir sur blanc',
-      'Vous filtrez dessus au lieu de fouiller trois cents annonces',
-      'Vous achetez compatible du premier coup',
+      'Main d’arc, puissance, catégorie, état, marque',
+      'La fiche porte l’allonge, la longueur, le spine',
+      'Fini les cinquante annonces à ouvrir pour vérifier la compatibilité',
+    ],
+  },
+  {
+    icon: 'content-duplicate',
+    titre: 'Votre annonce en un copier-coller',
+    texte:
+      'Vous vendez déjà ailleurs ? Collez le lien : titre, description, prix et photos sont repris.',
+    points: [
+      'La catégorie et la marque sont devinées, pas ressaisies',
+      'Vous relisez, vous corrigez, vous publiez',
+      'Rien ne part sans que vous ayez validé',
+    ],
+  },
+  {
+    icon: 'shield-alert-outline',
+    titre: 'Les arnaques repérées avant vous',
+    texte:
+      'Presque toutes commencent pareil : « payez-moi par virement, ce sera plus simple ».',
+    points: [
+      'Ces messages sont détectés, et vous êtes prévenu dans la conversation',
+      'L’identité des vendeurs qui le veulent est contrôlée, et se voit',
+      'Un avis après chaque vente, des deux côtés',
     ],
   },
   {
     icon: 'handshake-outline',
-    titre: 'Essayez l’arc avant de le payer',
+    titre: 'Essayez au club, ou faites livrer',
     texte:
-      'Un arc doit vous aller. Retrouvez le vendeur à son club, tirez quelques volées, et ne validez qu’après.',
+      'Un arc doit vous aller. Tirez quelques volées avant de valider — ou faites-le venir, même en 130 cm.',
     points: [
-      '0,99 € pour une remise tracée, quel que soit le prix de l’arc',
-      'Un code que vous ne donnez qu’une fois l’arc en main',
-      'Aucun plafond : de la corde à 20 € à l’arc de compétition',
-    ],
-  },
-  {
-    icon: 'package-variant-closed',
-    titre: 'Ou faites-le livrer, même en 130 cm',
-    texte:
-      'Le port est demandé aux transporteurs pour votre colis, pas deviné au jugé par le vendeur.',
-    points: [
-      'Ceux qui ne prennent pas la longueur sont écartés d’office',
-      'L’étiquette est prête et déjà réglée : le vendeur n’avance rien',
-      'Votre paiement attend que vous ayez reçu l’arc',
-    ],
-  },
-  {
-    icon: 'hand-coin-outline',
-    titre: 'Vendre ne vous coûte rien',
-    texte:
-      'Vous touchez votre prix entier : aucune commission n’est prélevée dessus.',
-    points: [
-      'C’est l’acheteur qui règle la protection, pas vous',
-      'Vous vendez déjà ailleurs ? Collez le lien, l’annonce est reprise',
-      'Identité vérifiée et avis après vente : votre sérieux se voit',
+      '0,99 € en main propre, avec un code donné après essai',
+      'À distance : le port est demandé aux transporteurs, l’étiquette est prête',
+      'Aucun plafond, là où ailleurs la protection s’arrête à 2 500 €',
     ],
   },
 ] as const;

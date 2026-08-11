@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -21,7 +21,7 @@ import {
 } from '@/services/payments';
 import {
   createLabel, fetchRelayPoints, fetchShipment,
-  type RelayPoint, type Shipment,
+  type PackagingChoice, type RelayPoint, type Shipment,
 } from '@/services/shipping';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
@@ -50,6 +50,10 @@ export default function OrderScreen() {
   // On ne le demande qu'à ce moment-là : l'acheteur ne peut pas le choisir,
   // il ne sait pas d'où part le paquet.
   const [dropoffs, setDropoffs] = useState<RelayPoint[] | null>(null);
+  const [emballages, setEmballages] = useState<PackagingChoice[] | null>(null);
+  // Les réponses déjà données. Un transporteur peut réclamer les deux, et il
+  // serait pénible de redemander la première après avoir posé la seconde.
+  const repondu = useRef<{ depot?: { code: string; label: string }; emballage?: string }>({});
   // Le code de remise : l'acheteur le lit, le vendeur le saisit. Jamais
   // l'inverse — sinon le vendeur pourrait solder la vente sans avoir sorti
   // l'arc du coffre.
@@ -115,24 +119,38 @@ export default function OrderScreen() {
   // L'étiquette est payée par la plateforme avec le port déjà encaissé : le
   // vendeur n'a rien à avancer. Deux appuis ne l'achètent pas deux fois — la
   // fonction Edge rend la même expédition.
-  const editerEtiquette = async (depot?: RelayPoint) => {
+  const editerEtiquette = async (depot?: RelayPoint, emballage?: string) => {
+    if (depot) {
+      repondu.current.depot = {
+        code: depot.code,
+        label: `${depot.name}, ${depot.address} ${depot.zip} ${depot.city}`,
+      };
+    }
+    if (emballage) repondu.current.emballage = emballage;
+
     setLabelling(true);
     try {
       const { labelUrl } = await createLabel(
         order.id,
-        depot ? { code: depot.code, label: `${depot.name}, ${depot.address} ${depot.zip} ${depot.city}` } : undefined,
+        repondu.current.depot,
+        repondu.current.emballage,
       );
       setDropoffs(null);
+      setEmballages(null);
       await load();
       if (labelUrl) await WebBrowser.openBrowserAsync(labelUrl);
     } catch (error) {
       const details = error as Error & {
         needsDropoff?: boolean;
+        needsPackaging?: boolean;
+        choices?: PackagingChoice[];
         operator?: string;
         service?: string;
         from?: { zip: string; city: string; country: string };
       };
-      if (details.needsDropoff && details.from && details.operator && details.service) {
+      if (details.needsPackaging && details.choices) {
+        setEmballages(details.choices);
+      } else if (details.needsDropoff && details.from && details.operator && details.service) {
         try {
           setDropoffs(
             await fetchRelayPoints(
@@ -377,7 +395,33 @@ export default function OrderScreen() {
                     L’étiquette est déjà payée par les frais de port. Imprimez-la, collez-la sur le
                     colis, et déposez-le.
                   </Text>
-                  {dropoffs ? (
+                  {emballages ? (
+                    <>
+                      <Text style={styles.cardTitle}>Comment est emballé le colis ?</Text>
+                      <Text style={styles.aide}>
+                        L’envoi est assuré à hauteur du prix de l’arc. L’assureur demande de quoi
+                        il s’agit : répondez juste, c’est ce qui vaudra en cas de casse.
+                      </Text>
+                      {emballages.map((choix) => (
+                        <Pressable
+                          key={choix.code}
+                          accessibilityRole="button"
+                          onPress={() => editerEtiquette(undefined, choix.code)}
+                          style={({ pressed }) => [styles.depot, pressed && styles.pressed]}
+                        >
+                          <MaterialCommunityIcons
+                            name="package-variant-closed"
+                            size={18}
+                            color={colors.primary}
+                          />
+                          <View style={styles.flex}>
+                            <Text style={styles.depotName}>{choix.label}</Text>
+                            <Text style={styles.depotAddress}>{choix.detail}</Text>
+                          </View>
+                        </Pressable>
+                      ))}
+                    </>
+                  ) : dropoffs ? (
                     <>
                       <Text style={styles.cardTitle}>Où déposerez-vous le colis ?</Text>
                       {dropoffs.slice(0, 12).map((point) => (

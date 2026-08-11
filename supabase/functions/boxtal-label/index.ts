@@ -11,8 +11,9 @@
  */
 import { CORS, callerId, json, serviceClient } from '../_shared/context.ts';
 import {
-  CONTENU_SPORT, boxtalGet, boxtalPost, exigePointDepot, exigePointRetrait, fetchLabel,
-  firstText, offreRealisable, parcelOf, parcelParams, pathText, readOffers,
+  CONTENU_SPORT, EMBALLAGES, assuranceParams, boxtalGet, boxtalPost, emballageOf,
+  exigePointDepot, exigePointRetrait, fetchLabel, firstText, offreRealisable, parcelOf,
+  parcelParams, pathText, readOffers,
 } from '../_shared/boxtal.ts';
 
 const demain = (): string =>
@@ -35,7 +36,7 @@ Deno.serve(async (request) => {
     const sellerId = await callerId(request);
     if (!sellerId) return json({ error: 'Connexion requise.' }, 401);
 
-    const { orderId, dropoffCode, dropoffLabel } = await request.json();
+    const { orderId, dropoffCode, dropoffLabel, packaging } = await request.json();
     if (!orderId) return json({ error: 'Commande non précisée.' }, 400);
 
     const db = serviceClient();
@@ -44,7 +45,7 @@ Deno.serve(async (request) => {
       .from('orders')
       // Une seule chaîne littérale : découpée avec des `+`, supabase-js perd
       // le type de la ligne et rend une erreur générique.
-      .select('id, seller_id, buyer_id, listing_id, listing_title, item_amount, status, shipping_mode, ship_to_civility, ship_to_name, ship_to_address, ship_to_zip, ship_to_city, ship_to_country, ship_to_phone, relay_code, carrier_operator, carrier_service')
+      .select('id, seller_id, buyer_id, listing_id, listing_title, item_amount, insurance_amount, status, shipping_mode, ship_to_civility, ship_to_name, ship_to_address, ship_to_zip, ship_to_city, ship_to_country, ship_to_phone, relay_code, carrier_operator, carrier_service')
       .eq('id', orderId)
       .maybeSingle();
 
@@ -135,6 +136,24 @@ Deno.serve(async (request) => {
       );
     }
 
+    // L'acheteur a payé une assurance : il faut la souscrire, et l'assureur
+    // veut savoir comment le colis est fait. C'est une question au vendeur,
+    // posée comme celle du point de dépôt — un refus qui attend une réponse,
+    // pas une erreur.
+    const assure = (order.insurance_amount ?? 0) > 0 && offre.insuranceCents > 0;
+    const emballage = assure ? emballageOf(packaging) : null;
+    if (assure && !emballage) {
+      return json(
+        {
+          error: 'Indiquez comment le colis est emballé : c’est ce sur quoi l’assurance s’appuiera.',
+          needsPackaging: true,
+          choices: EMBALLAGES.map(({ code, label, detail }) => ({ code, label, detail })),
+          insuredValue: order.item_amount,
+        },
+        409,
+      );
+    }
+
     const parametres: Record<string, string | number | boolean> = {
       'shipper.country': depart.country,
       'shipper.zipcode': depart.zip,
@@ -162,11 +181,11 @@ Deno.serve(async (request) => {
       content_code: CONTENU_SPORT,
       'colis.description': String(order.listing_title).slice(0, 60),
       'colis.valeur': (order.item_amount / 100).toFixed(2),
-      'assurance.selection': false,
       operator: order.carrier_operator,
       service: order.carrier_service,
       url_push: urlPush(),
       ...parcelParams(colis),
+      'assurance.selection': false,
     };
 
     // Retrait et dépôt sont deux choses distinctes : l'un est le point où
@@ -179,7 +198,30 @@ Deno.serve(async (request) => {
       parametres['depot.pointrelais'] = String(dropoffCode);
     }
 
-    const reponse = await boxtalPost('api/v1/order', parametres);
+    // Souscrite sur `colis.valeur`, donc sur le prix de l'arc. Construite
+    // ici et non plus haut : les points de retrait et de dépôt viennent d'être
+    // ajoutés, et une copie prise avant les aurait perdus.
+    const avecAssurance = emballage
+      ? { ...parametres, ...assuranceParams(emballage) }
+      : parametres;
+
+    // Si Boxtal refuse la commande à cause de l'assurance, le colis part
+    // quand même sans elle : un vendeur bloqué avec une commande déjà payée
+    // est un problème plus grave qu'une couverture manquante, laquelle nous
+    // revient de toute façon par notre propre garantie. Ce rattrapage existe
+    // parce que la souscription est le seul appel que nous ne pouvons pas
+    // répéter à blanc — il coûte une expédition réelle à chaque essai.
+    let assuranceSouscrite = Boolean(emballage);
+    let reponse;
+    try {
+      reponse = await boxtalPost('api/v1/order', avecAssurance);
+    } catch (echec) {
+      if (!emballage) throw echec;
+      console.error('assurance refusée par Boxtal, repli sans couverture :', echec);
+      assuranceSouscrite = false;
+      reponse = await boxtalPost('api/v1/order', parametres);
+    }
+
     const reference = firstText(reponse, 'reference');
     if (!reference) throw new Error('Boxtal n’a pas renvoyé de référence d’expédition.');
 
@@ -197,6 +239,8 @@ Deno.serve(async (request) => {
       cost_amount: cents(pathText(confirmation, 'price', 'tax-inclusive')),
       dropoff_code: dropoffCode ?? null,
       dropoff_label: dropoffLabel ?? null,
+      packaging: assuranceSouscrite ? emballage?.code ?? null : null,
+      insured_value: assuranceSouscrite ? order.item_amount : null,
     });
     if (insertError) throw new Error(insertError.message);
 

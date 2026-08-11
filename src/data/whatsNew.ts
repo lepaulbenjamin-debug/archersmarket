@@ -33,6 +33,11 @@ export const NOUVEAUTES: Nouveautes = {
         'Les transporteurs sont rangés entre point relais et domicile, avec la date de livraison et une carte des points relais.',
     },
     {
+      icon: 'shield-check-outline',
+      texte:
+        'Au-dessus de 100 €, le colis est assuré pour le prix de l’arc, assurance comprise dans le port. Un transporteur ne rembourse sinon que 23 € le kilo.',
+    },
+    {
       icon: 'bell-ring-outline',
       texte:
         'Enregistrez une recherche et soyez prévenu dès qu’une annonce y correspond.',

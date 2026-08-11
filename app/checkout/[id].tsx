@@ -411,6 +411,11 @@ export default function CheckoutScreen() {
                               Livré {formatDeliveryDate(candidate.deliveryDate)}
                             </Text>
                           ) : null}
+                          {candidate.insuranceCents > 0 ? (
+                            <Text style={styles.offerAssurance}>
+                              Assurance comprise, {formatCents(candidate.insuranceCents)}
+                            </Text>
+                          ) : null}
                         </View>
                         <Text style={[styles.offerPrice, actif && styles.offerPriceActive]}>
                           {formatCents(candidate.priceCents)}
@@ -473,7 +478,12 @@ export default function CheckoutScreen() {
                 value={formatCents(estimation.item)}
                 muted={handDelivery}
               />
-              {!handDelivery && <Line label="Livraison" value={formatCents(estimation.shipping)} />}
+              {!handDelivery && (
+                <Line
+                  label={offer && offer.insuranceCents > 0 ? 'Livraison assurée' : 'Livraison'}
+                  value={formatCents(estimation.shipping)}
+                />
+              )}
               <Line
                 label={handDelivery ? 'Remise vérifiée' : 'Protection acheteur'}
                 value={formatCents(estimation.protection)}
@@ -484,6 +494,13 @@ export default function CheckoutScreen() {
                 value={formatCents(estimation.total)}
                 strong
               />
+              {offer && offer.insuranceCents > 0 && (
+                <Text style={styles.assuranceNote}>
+                  Le colis est assuré pour {formatCents(toCents(listing.price))}. Sans cela, un
+                  transporteur ne rembourse que 23 € par kilo — soit rarement plus de 70 € pour un
+                  arc.
+                </Text>
+              )}
             </View>
           )}
 
@@ -575,6 +592,17 @@ const styles = StyleSheet.create({
   offerActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   offerName: { fontSize: 14, fontWeight: '700', color: colors.text },
   offerService: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  offerAssurance: {
+    fontSize: 12,
+    color: colors.primary,
+    marginTop: 2,
+  },
+  assuranceNote: {
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 17,
+    marginTop: spacing.sm,
+  },
   offerDate: { fontSize: 11.5, color: colors.textFaint, marginTop: 1 },
   offerPrice: { fontSize: 15, fontWeight: '800', color: colors.text },
   offerPriceActive: { color: colors.primary },

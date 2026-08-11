@@ -244,6 +244,106 @@ export const exigePointRetrait = (offer: Offer): boolean =>
 export const exigePointDepot = (offer: Offer): boolean =>
   offer.mandatory.includes('depot.pointrelais');
 
+// ---------------------------------------------------------------------------
+// L'assurance ad valorem
+//
+// Chaque transporteur répond déjà d'une perte, mais à hauteur dérisoire : les
+// offres relais annoncent « 23 € par kilo, sans excéder 460 € par colis ».
+// Pour un arc à huit cents euros dans un carton de trois kilos, cela fait
+// soixante-neuf euros. C'est nous qui paierions le reste, puisque nous devons
+// à l'acheteur le remboursement de sa commande.
+//
+// L'assurance ad valorem de Boxtal comble exactement cet écart. Elle se
+// souscrit à la commande, se facture sur la valeur déclarée, et se chiffre
+// offre par offre : la cotation en donne le prix sans qu'on ait à le demander.
+//
+// Elle réclame en échange une déclaration d'emballage — quatre champs, dont
+// les valeurs admises sont énumérées par l'offre elle-même et relevées ici sur
+// une vraie cotation. Ce n'est pas une formalité : un colis mal emballé se
+// casse, et déclarer comment on l'a emballé fait réfléchir à la question.
+// ---------------------------------------------------------------------------
+
+/**
+ * En dessous de cette valeur, on n'assure pas.
+ *
+ * La prime tourne autour d'un euro quelle que soit la valeur en bas de
+ * l'échelle : à cinquante euros d'objet, c'est deux pour cent du prix pour
+ * couvrir ce que la responsabilité du transporteur couvre déjà.
+ */
+export const SEUIL_ASSURANCE = 10_000;
+
+export interface Emballage {
+  code: string;
+  label: string;
+  detail: string;
+  /** Les quatre déclarations, dans les termes exacts que Boxtal accepte. */
+  params: {
+    emballage: string;
+    materiau: string;
+    protection: string;
+    fermeture: string;
+  };
+}
+
+/**
+ * Les trois façons dont un archer emballe, et rien d'autre.
+ *
+ * Boxtal admet huit contenants, treize matériaux, treize protections et dix
+ * fermetures — cent mille combinaisons, dont trois servent ici. Le vendeur
+ * choisit une phrase ; nous traduisons.
+ */
+export const EMBALLAGES: Emballage[] = [
+  {
+    code: 'carton',
+    label: 'Carton',
+    detail: 'Calage à bulles, fermé au ruban adhésif',
+    params: {
+      emballage: 'Boîte',
+      materiau: 'Carton',
+      protection: 'Bulles plastiques',
+      fermeture: 'Ruban adhésif',
+    },
+  },
+  {
+    code: 'tube',
+    label: 'Tube ou étui rigide',
+    detail: 'Matelassé à l’intérieur, fermé au ruban adhésif',
+    params: {
+      emballage: 'Tube',
+      materiau: 'Carton',
+      protection: 'Matelassage',
+      fermeture: 'Ruban adhésif',
+    },
+  },
+  {
+    code: 'valise',
+    label: 'Valise ou malle rigide',
+    detail: 'Mousse découpée, fermeture sanglée',
+    params: {
+      emballage: 'Malle',
+      materiau: 'Plastique',
+      protection: 'Plaque mousse',
+      fermeture: 'Sangle ou feuillard',
+    },
+  },
+];
+
+export const emballageOf = (code: string | null | undefined): Emballage | null =>
+  EMBALLAGES.find((choix) => choix.code === code) ?? null;
+
+/** Faut-il assurer cet envoi, et l'offre le permet-elle ? */
+export const assurable = (itemAmount: number, offer: Offer): boolean =>
+  itemAmount >= SEUIL_ASSURANCE && offer.insuranceCents > 0;
+
+/** Aplatit une déclaration d'emballage en paramètres `assurance.*`. */
+export const assuranceParams = (choix: Emballage): BoxtalParams => ({
+  'assurance.selection': true,
+  'assurance.emballage': choix.params.emballage,
+  'assurance.materiau': choix.params.materiau,
+  'assurance.protection': choix.params.protection,
+  'assurance.fermeture': choix.params.fermeture,
+});
+
 /** Aplatit un colis en paramètres `colis_1.*`. */
 export const parcelParams = (parcel: Parcel): BoxtalParams => ({
   'colis_1.poids': parcel.poids,
@@ -263,6 +363,13 @@ export interface Offer {
   serviceLabel: string;
   /** Prix toutes taxes comprises, en centimes. */
   priceCents: number;
+  /**
+   * Prix de l'assurance ad valorem pour cet envoi, en centimes, ou zéro si
+   * l'offre ne la propose pas. Boxtal le chiffre sur `colis.valeur`, et le
+   * rend spontanément : nul besoin de demander l'option pour en connaître le
+   * prix.
+   */
+  insuranceCents: number;
   /** DROPOFF_POINT quand le vendeur doit déposer en point relais. */
   collectionType: string;
   /** PICKUP_POINT quand l'acheteur retire en point relais. */
@@ -311,6 +418,7 @@ export function readOffers(document: XmlNode): Offer[] {
       priceCents: cents(
         pathText(offre, 'price', 'tax-inclusive') ?? pathText(offre, 'price', 'tax-exclusive'),
       ),
+      insuranceCents: cents(pathText(offre, 'insurance', 'tax-inclusive')),
       collectionType: pathText(offre, 'collection', 'type', 'code') ?? '',
       deliveryType: pathText(offre, 'delivery', 'type', 'code') ?? '',
       deliveryLabel: nettoieLibelle(pathText(offre, 'delivery', 'label') ?? ''),

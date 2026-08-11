@@ -129,7 +129,15 @@ export interface ShippingOffer {
   operatorLabel: string;
   serviceCode: string;
   serviceLabel: string;
+  /** Port et assurance réunis : c'est ce que l'acheteur paiera. */
   priceCents: Cents;
+  /**
+   * Part d'assurance comprise dans le prix, ou zéro. Au-dessus de cent euros,
+   * l'envoi est couvert à hauteur du prix de l'objet : la responsabilité des
+   * transporteurs s'arrête à vingt-trois euros le kilo, ce qui ne rembourse
+   * pas un arc.
+   */
+  insuranceCents: Cents;
   collectionType: string;
   deliveryType: string;
   deliveryLabel: string;
@@ -302,18 +310,35 @@ export interface DropoffNeeded {
   from: { zip: string; city: string; country: string };
 }
 
+/** Une façon d'emballer, telle que l'assureur l'accepte. */
+export interface PackagingChoice {
+  code: string;
+  label: string;
+  detail: string;
+}
+
+export interface PackagingNeeded {
+  needsPackaging: true;
+  choices: PackagingChoice[];
+  insuredValue: Cents;
+}
+
 export async function createLabel(
   orderId: string,
   dropoff?: { code: string; label: string },
+  packaging?: string,
 ): Promise<{ reference: string; labelUrl: string | null }> {
   const { data, error } = await supabase.functions.invoke('boxtal-label', {
-    body: { orderId, dropoffCode: dropoff?.code, dropoffLabel: dropoff?.label },
+    body: { orderId, dropoffCode: dropoff?.code, dropoffLabel: dropoff?.label, packaging },
   });
   if (error) {
-    // Le transporteur réclame un point de dépôt : ce n'est pas un échec, c'est
-    // une question. On la remonte telle quelle pour que l'écran la pose.
+    // Deux refus ne sont pas des échecs mais des questions : où le vendeur
+    // déposera, et comment le colis est emballé. On les remonte telles quelles
+    // pour que l'écran les pose.
     const corps = await edgeBody(error);
-    if (corps?.needsDropoff) throw Object.assign(new Error(corps.error), corps);
+    if (corps?.needsDropoff || corps?.needsPackaging) {
+      throw Object.assign(new Error(corps.error), corps);
+    }
     throw new Error(corps?.error ?? 'Édition de l’étiquette impossible.');
   }
   const payload = data as { reference?: string; label_url?: string | null; error?: string };

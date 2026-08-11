@@ -11,7 +11,7 @@
 import { CORS, callerId, json, serviceClient } from '../_shared/context.ts';
 import { stripeRequest } from '../_shared/stripe.ts';
 import {
-  CONTENU_SPORT, boxtalGet, parcelOf, parcelParams, readOffers,
+  CONTENU_SPORT, assurable, boxtalGet, parcelOf, parcelParams, readOffers,
 } from '../_shared/boxtal.ts';
 
 interface Delivery {
@@ -41,7 +41,7 @@ async function coteLePort(
   db: ReturnType<typeof serviceClient>,
   listing: { seller_id: string; price: number | string; parcel_size: string | null },
   delivery: Delivery,
-): Promise<number> {
+): Promise<{ port: number; assurance: number }> {
   const { data: depart } = await db
     .from('seller_addresses')
     .select('zip, city, country')
@@ -72,7 +72,15 @@ async function coteLePort(
   if (!offre) {
     throw new Error('Ce mode de livraison n’est plus disponible : choisissez-en un autre.');
   }
-  return offre.priceCents;
+
+  // Le port et l'assurance sont recotés ici, comme le reste : le prix qui
+  // engage est celui que le serveur vient de lire, jamais celui que le
+  // téléphone a retenu il y a cinq minutes.
+  const valeur = Math.round(Number(listing.price) * 100);
+  return {
+    port: offre.priceCents,
+    assurance: assurable(valeur, offre) ? offre.insuranceCents : 0,
+  };
 }
 
 Deno.serve(async (request) => {
@@ -130,8 +138,12 @@ Deno.serve(async (request) => {
     }
 
     const itemAmount = Math.round(Number(listing.price) * 100);
-    const shippingAmount =
-      mode === 'hand' ? 0 : await coteLePort(db, listing, delivery);
+    const port = mode === 'hand'
+      ? { port: 0, assurance: 0 }
+      : await coteLePort(db, listing, delivery);
+    // L'assurance fait partie du port : c'est une seule ligne pour l'acheteur,
+    // et deux nombres dans nos comptes.
+    const shippingAmount = port.port + port.assurance;
 
     // Les règles de calcul vivent en base : une seule définition fait foi.
     // En remise, c'est un forfait ; en livraison, un pourcentage du prix.
@@ -157,6 +169,7 @@ Deno.serve(async (request) => {
       ship_to_city: mode === 'hand' ? null : delivery.city,
       ship_to_country: (delivery.country ?? 'FR').toUpperCase(),
       ship_to_phone: mode === 'hand' ? null : (delivery.phone ?? null),
+      insurance_amount: port.assurance,
       relay_code: mode === 'relay' ? delivery.relayCode : null,
       relay_label: mode === 'relay' ? (delivery.relayLabel ?? null) : null,
       carrier_operator: mode === 'hand' ? null : delivery.operator,

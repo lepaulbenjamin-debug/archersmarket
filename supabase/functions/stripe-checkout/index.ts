@@ -15,7 +15,7 @@ import {
 } from '../_shared/boxtal.ts';
 
 interface Delivery {
-  mode?: 'home' | 'relay' | 'hand';
+  mode?: 'home' | 'relay' | 'hand' | 'archer';
   civility?: 'M' | 'Mme';
   name?: string;
   address?: string;
@@ -27,6 +27,8 @@ interface Delivery {
   service?: string;
   relayCode?: string;
   relayLabel?: string;
+  /** Le trajet retenu, en convoyage entre archers. */
+  tripId?: string;
 }
 
 /**
@@ -101,11 +103,15 @@ Deno.serve(async (request) => {
       if (!delivery.name || !delivery.address || !delivery.zip || !delivery.city) {
         return json({ error: 'Adresse de livraison incomplète.' }, 400);
       }
-      if (!delivery.operator || !delivery.service) {
-        return json({ error: 'Aucun transporteur choisi.' }, 400);
-      }
-      if (mode === 'relay' && !delivery.relayCode) {
-        return json({ error: 'Choisissez un point relais.' }, 400);
+      if (mode === 'archer') {
+        if (!delivery.tripId) return json({ error: 'Aucun trajet choisi.' }, 400);
+      } else {
+        if (!delivery.operator || !delivery.service) {
+          return json({ error: 'Aucun transporteur choisi.' }, 400);
+        }
+        if (mode === 'relay' && !delivery.relayCode) {
+          return json({ error: 'Choisissez un point relais.' }, 400);
+        }
       }
     }
 
@@ -138,9 +144,47 @@ Deno.serve(async (request) => {
     }
 
     const itemAmount = Math.round(Number(listing.price) * 100);
+
+    // En convoyage, le « port » est la participation aux frais du trajet, et
+    // elle est lue sur le trajet lui-même : c'est le convoyeur qui l'a fixée,
+    // pas l'acheteur.
+    let trajet: { id: string; carrier_id: string; contribution: number } | null = null;
+    if (mode === 'archer') {
+      const { data } = await db
+        .from('archer_trips')
+        .select('id, carrier_id, contribution, status, depart_on')
+        .eq('id', delivery.tripId ?? '')
+        .maybeSingle();
+
+      if (!data || data.status !== 'open') {
+        return json({ error: 'Ce trajet n’est plus proposé.' }, 409);
+      }
+      if (data.depart_on < new Date().toISOString().slice(0, 10)) {
+        return json({ error: 'Ce trajet est déjà parti.' }, 409);
+      }
+      if (data.carrier_id === buyerId || data.carrier_id === listing.seller_id) {
+        return json({ error: 'Le convoyeur ne peut pas être une partie à la vente.' }, 409);
+      }
+
+      // Le plafond vient de la caisse de garantie, et il bouge : autant le
+      // dire ici plutôt que de laisser la contrainte parler en base.
+      const { data: plafond } = await db.rpc('archer_value_cap');
+      if (Number(plafond) < itemAmount) {
+        return json(
+          {
+            error: `Le convoyage entre archers est limité à ${Math.floor(Number(plafond) / 100)} € par colis pour le moment. Choisissez un transporteur.`,
+          },
+          409,
+        );
+      }
+      trajet = { id: data.id, carrier_id: data.carrier_id, contribution: data.contribution };
+    }
+
     const port = mode === 'hand'
       ? { port: 0, assurance: 0 }
-      : await coteLePort(db, listing, delivery);
+      : trajet
+        ? { port: trajet.contribution, assurance: 0 }
+        : await coteLePort(db, listing, delivery);
     // L'assurance fait partie du port : c'est une seule ligne pour l'acheteur,
     // et deux nombres dans nos comptes.
     const shippingAmount = port.port + port.assurance;
@@ -172,8 +216,14 @@ Deno.serve(async (request) => {
       insurance_amount: port.assurance,
       relay_code: mode === 'relay' ? delivery.relayCode : null,
       relay_label: mode === 'relay' ? (delivery.relayLabel ?? null) : null,
-      carrier_operator: mode === 'hand' ? null : delivery.operator,
-      carrier_service: mode === 'hand' ? null : delivery.service,
+      carrier_operator: mode === 'home' || mode === 'relay' ? delivery.operator : null,
+      carrier_service: mode === 'home' || mode === 'relay' ? delivery.service : null,
+      // La participation est le port, et elle est aussi ce que le convoyeur
+      // recevra : deux colonnes pour un seul nombre, parce que le virement ne
+      // doit pas avoir à deviner laquelle des deux il suit.
+      carrier_id: trajet?.carrier_id ?? null,
+      trip_id: trajet?.id ?? null,
+      carrier_amount: trajet?.contribution ?? 0,
     };
 
     // Une commande déjà ouverte pour cette annonce et cet acheteur se reprend

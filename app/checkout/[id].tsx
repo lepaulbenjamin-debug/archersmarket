@@ -23,6 +23,9 @@ import { RelayPointPicker } from '@/components/RelayPointPicker';
 import { CivilityPicker } from '@/components/CivilityPicker';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
+import {
+  archerValueCap, formatDepart, tripsForListing, type TripOffer,
+} from '@/services/trips';
 import { colors, radius, spacing } from '@/theme';
 
 /**
@@ -66,7 +69,13 @@ export default function CheckoutScreen() {
   // Vingt et une offres à la suite, personne ne les lit. On les range par
   // destination : c'est la question que se pose l'acheteur en premier —
   // « je vais le chercher, ou on me l'apporte ? »
-  const [famille, setFamille] = useState<'relay' | 'home'>('relay');
+  const [famille, setFamille] = useState<'relay' | 'home' | 'archer'>('relay');
+  // Le convoyage entre archers : un troisième « transporteur », qui est une
+  // personne. Il vit dans le même sélecteur parce que c'est la même question —
+  // comment l'arc arrive jusqu'à moi.
+  const [trips, setTrips] = useState<TripOffer[] | null>(null);
+  const [trip, setTrip] = useState<TripOffer | null>(null);
+  const [cap, setCap] = useState<number | null>(null);
   const [toutVoir, setToutVoir] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,17 +139,38 @@ export default function CheckoutScreen() {
     if (!offers?.length) return;
     const moinsCher = (liste: ShippingOffer[]) =>
       liste.length ? Math.min(...liste.map((o) => o.priceCents)) : Infinity;
+    // Jamais « entre archers » d'office : confier son arc à quelqu'un se
+    // décide, cela ne se subit pas parce que c'était le moins cher.
     setFamille(moinsCher(familles.relay) <= moinsCher(familles.home) ? 'relay' : 'home');
     setToutVoir(false);
   }, [offers, familles]);
+
+  /**
+   * Un objet plus cher que ce que la caisse de garantie peut couvrir ne part
+   * pas dans un coffre. Le plafond bouge avec les colis déjà en route : on le
+   * demande, on ne le devine pas.
+   */
+  const tropCher = !!listing && cap !== null && toCents(listing.price) > cap;
+  const convoyages = useMemo(
+    () => (tropCher ? [] : (trips ?? [])),
+    [trips, tropCher],
+  );
 
   const chercherOffres = useCallback(async () => {
     if (!id || !adresseComplete) return;
     setBusy('offers');
     setError(null);
     try {
-      const trouvees = await fetchOffers(id, address);
+      // Les trajets sont cherchés en même temps, et leur échec n'empêche
+      // rien : un convoyage indisponible ne doit pas bloquer une livraison.
+      const [trouvees, trajets, plafond] = await Promise.all([
+        fetchOffers(id, address),
+        tripsForListing(id, address.zip).catch(() => [] as TripOffer[]),
+        archerValueCap().catch(() => 0),
+      ]);
       setOffers(trouvees);
+      setTrips(trajets);
+      setCap(plafond);
       if (trouvees.length === 0) setError('Aucun transporteur ne dessert cette adresse pour ce colis.');
     } catch (err) {
       setError((err as Error).message);
@@ -150,8 +180,16 @@ export default function CheckoutScreen() {
     }
   }, [id, address, adresseComplete]);
 
+  const choisirTrajet = (candidate: TripOffer) => {
+    setTrip(candidate);
+    setOffer(null);
+    setPoint(null);
+    setPoints(null);
+  };
+
   const choisirOffre = async (candidate: ShippingOffer) => {
     setOffer(candidate);
+    setTrip(null);
     setPoint(null);
     setPoints(null);
     if (!needsRelay(candidate)) return;
@@ -171,12 +209,14 @@ export default function CheckoutScreen() {
     // se règle sur place et n'entre pas dans ce que l'acheteur nous paie.
     return handDelivery
       ? handoverBreakdown(toCents(listing.price))
-      : priceBreakdown(toCents(listing.price), offer?.priceCents ?? 0);
-  }, [listing, offer, handDelivery]);
+      : priceBreakdown(toCents(listing.price), trip?.contribution ?? offer?.priceCents ?? 0);
+  }, [listing, offer, trip, handDelivery]);
 
   const pretAPayer =
-    !!listing &&
-    (handDelivery || (adresseComplete && !!offer && (!needsRelay(offer) || !!point)));
+    !!listing
+    && (handDelivery
+      || (adresseComplete
+        && (!!trip || (!!offer && (!needsRelay(offer) || !!point)))));
 
   const payer = async () => {
     if (!id || !pretAPayer) return;
@@ -184,7 +224,13 @@ export default function CheckoutScreen() {
     setError(null);
     try {
       const { orderId, clientSecret } = await createCheckout(id, {
-        mode: handDelivery ? 'hand' : needsRelay(offer!) ? 'relay' : 'home',
+        mode: handDelivery
+          ? 'hand'
+          : trip
+            ? 'archer'
+            : needsRelay(offer!)
+              ? 'relay'
+              : 'home',
         civility: address.civility,
         name: address.name,
         address: address.address,
@@ -196,6 +242,7 @@ export default function CheckoutScreen() {
         service: offer?.serviceCode,
         relayCode: point?.code,
         relayLabel: point ? `${point.name}, ${point.address} ${point.zip} ${point.city}` : undefined,
+        tripId: trip?.id,
       });
 
       const { error: init } = await initPaymentSheet({
@@ -348,13 +395,13 @@ export default function CheckoutScreen() {
                   <Text style={styles.section}>Transporteur</Text>
                   <View style={styles.familles}>
                     {([
-                      ['relay', 'En point relais', familles.relay],
-                      ['home', 'À domicile', familles.home],
-                    ] as const).map(([cle, libelle, liste]) => {
+                      ['relay', 'En point relais', familles.relay.map((o) => o.priceCents)],
+                      ['home', 'À domicile', familles.home.map((o) => o.priceCents)],
+                      ['archer', 'Entre archers', convoyages.map((t) => t.contribution)],
+                    ] as const).map(([cle, libelle, prix]) => {
                       const actif = famille === cle;
-                      const mini = liste.length
-                        ? Math.min(...liste.map((o) => o.priceCents))
-                        : null;
+                      const liste = prix;
+                      const mini = prix.length ? Math.min(...prix) : null;
                       return (
                         <Pressable
                           key={cle}
@@ -364,6 +411,14 @@ export default function CheckoutScreen() {
                           onPress={() => {
                             setFamille(cle);
                             setToutVoir(false);
+                            // Changer d'onglet efface le choix précédent :
+                            // sans cela, l'écran montre les transporteurs et
+                            // facture le convoyage retenu deux onglets plus
+                            // tôt.
+                            setOffer(null);
+                            setTrip(null);
+                            setPoint(null);
+                            setPoints(null);
                           }}
                           style={[
                             styles.famille,
@@ -384,7 +439,53 @@ export default function CheckoutScreen() {
                     })}
                   </View>
 
-                  {(toutVoir ? familles[famille] : familles[famille].slice(0, 5)).map((candidate) => {
+                  {famille === 'archer' && convoyages.length === 0 ? (
+                    <Text style={styles.note}>
+                      {tropCher
+                        ? `Le convoyage entre archers est limité à ${formatCents(cap ?? 0)} par colis pour le moment.`
+                        : 'Aucun archer n’a déclaré ce trajet. Repassez plus tard : les trajets se déclarent souvent quelques jours avant une compétition.'}
+                    </Text>
+                  ) : null}
+
+                  {famille === 'archer'
+                    ? convoyages.map((candidate) => {
+                        const actif = trip?.id === candidate.id;
+                        return (
+                          <Pressable
+                            key={candidate.id}
+                            accessibilityRole="button"
+                            onPress={() => choisirTrajet(candidate)}
+                            style={[styles.offer, actif && styles.offerActive]}
+                          >
+                            <View style={styles.flex}>
+                              <Text style={styles.offerName}>{candidate.carrierName}</Text>
+                              <Text style={styles.offerService}>
+                                {candidate.fromCity} → {candidate.toCity}
+                              </Text>
+                              <Text style={styles.offerDate}>
+                                Départ {formatDepart(candidate.departOn)}
+                              </Text>
+                              {candidate.note ? (
+                                <Text style={styles.offerDate}>{candidate.note}</Text>
+                              ) : null}
+                            </View>
+                            <Text style={[styles.offerPrice, actif && styles.offerPriceActive]}>
+                              {formatCents(candidate.contribution)}
+                            </Text>
+                          </Pressable>
+                        );
+                      })
+                    : null}
+
+                  {famille === 'archer' && trip ? (
+                    <Text style={styles.assuranceNote}>
+                      {trip.carrierName} vous remettra l’arc en main propre, contre un code que
+                      vous ne donnerez qu’après l’avoir vu. Ce qu’il reçoit est une participation
+                      à ses frais de route, versée après la livraison.
+                    </Text>
+                  ) : null}
+
+                  {famille === 'archer' ? null : (toutVoir ? familles[famille] : familles[famille].slice(0, 5)).map((candidate) => {
                     const actif =
                       offer?.operatorCode === candidate.operatorCode &&
                       offer?.serviceCode === candidate.serviceCode;
@@ -424,7 +525,7 @@ export default function CheckoutScreen() {
                     );
                   })}
 
-                  {!toutVoir && familles[famille].length > 5 ? (
+                  {famille !== 'archer' && !toutVoir && familles[famille].length > 5 ? (
                     <Pressable
                       accessibilityRole="button"
                       onPress={() => setToutVoir(true)}

@@ -111,8 +111,12 @@ export interface Order {
   status: OrderStatus;
   /** direct : l'argent de l'objet n'est jamais passé par nous. */
   paymentMode: 'escrow' | 'direct';
-  shippingMode: 'home' | 'relay' | 'hand';
+  shippingMode: 'home' | 'relay' | 'hand' | 'archer';
   relayLabel?: string;
+  /** Convoyage : l'archer qui porte le colis, et ce qu'il reçoit. */
+  carrierId?: string;
+  carrierAmount?: Cents;
+  pickedUpAt?: string;
   trackingCarrier?: string;
   trackingNumber?: string;
   paidAt?: string;
@@ -134,8 +138,11 @@ interface OrderRow {
   total_amount: number;
   status: OrderStatus;
   payment_mode: 'escrow' | 'direct';
-  shipping_mode: 'home' | 'relay' | 'hand';
+  shipping_mode: 'home' | 'relay' | 'hand' | 'archer';
   relay_label: string | null;
+  carrier_id: string | null;
+  carrier_amount: number | null;
+  picked_up_at: string | null;
   tracking_carrier: string | null;
   tracking_number: string | null;
   paid_at: string | null;
@@ -159,6 +166,9 @@ const toOrder = (row: OrderRow): Order => ({
   paymentMode: row.payment_mode,
   shippingMode: row.shipping_mode,
   relayLabel: row.relay_label ?? undefined,
+  carrierId: row.carrier_id ?? undefined,
+  carrierAmount: row.carrier_amount ?? undefined,
+  pickedUpAt: row.picked_up_at ?? undefined,
   trackingCarrier: row.tracking_carrier ?? undefined,
   trackingNumber: row.tracking_number ?? undefined,
   paidAt: row.paid_at ?? undefined,
@@ -169,7 +179,7 @@ const toOrder = (row: OrderRow): Order => ({
 });
 
 const ORDER_SELECT =
-  'id, listing_id, listing_title, buyer_id, seller_id, item_amount, shipping_amount, protection_amount, total_amount, status, payment_mode, shipping_mode, relay_label, tracking_carrier, tracking_number, paid_at, shipped_at, delivered_at, released_at, created_at';
+  'id, listing_id, listing_title, buyer_id, seller_id, item_amount, shipping_amount, protection_amount, total_amount, status, payment_mode, shipping_mode, relay_label, carrier_id, carrier_amount, picked_up_at, tracking_carrier, tracking_number, paid_at, shipped_at, delivered_at, released_at, created_at';
 
 /** Les commandes du membre connecté, achats et ventes confondus. */
 export async function fetchOrders(): Promise<Order[]> {
@@ -323,7 +333,7 @@ export interface Checkout {
 
 /** Le choix de livraison transmis au paiement. */
 export interface CheckoutDelivery {
-  mode: 'home' | 'relay' | 'hand';
+  mode: 'home' | 'relay' | 'hand' | 'archer';
   /** Exigée par tous les transporteurs sur l'étiquette. */
   civility?: 'M' | 'Mme';
   name?: string;
@@ -336,6 +346,8 @@ export interface CheckoutDelivery {
   service?: string;
   relayCode?: string;
   relayLabel?: string;
+  /** Le trajet retenu, en convoyage entre archers. */
+  tripId?: string;
 }
 
 /**

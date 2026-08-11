@@ -23,6 +23,7 @@ import {
   createLabel, fetchRelayPoints, fetchShipment,
   type PackagingChoice, type RelayPoint, type Shipment,
 } from '@/services/shipping';
+import { fetchPickupCode } from '@/services/trips';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 
@@ -58,6 +59,9 @@ export default function OrderScreen() {
   // l'inverse — sinon le vendeur pourrait solder la vente sans avoir sorti
   // l'arc du coffre.
   const [handoverCode, setHandoverCode] = useState<string | null>(null);
+  // En convoyage, chacun tient un code : le vendeur celui du départ,
+  // l'acheteur celui de l'arrivée. Le convoyeur les saisit, ne les lit jamais.
+  const [pickupCode, setPickupCode] = useState<string | null>(null);
   const [codeSaisi, setCodeSaisi] = useState('');
   const [carrier, setCarrier] = useState('');
   const [tracking, setTracking] = useState('');
@@ -71,6 +75,17 @@ export default function OrderScreen() {
         // Échoue silencieusement côté vendeur : c'est voulu, le code ne lui
         // est pas destiné.
         setHandoverCode(await fetchHandoverCode(commande.id).catch(() => null));
+      }
+      if (commande?.shippingMode === 'archer'
+          && (commande.status === 'paid' || commande.status === 'shipped')) {
+        // Chacun demande le sien ; l'autre appel échoue, et c'est la preuve
+        // que la chaîne de garde tient.
+        const [remise, depart] = await Promise.all([
+          fetchHandoverCode(commande.id).catch(() => null),
+          fetchPickupCode(commande.id).catch(() => null),
+        ]);
+        setHandoverCode(remise);
+        setPickupCode(depart);
       }
     } catch (error) {
       Alert.alert('Commande indisponible', (error as Error).message);
@@ -291,14 +306,24 @@ export default function OrderScreen() {
                 ? order.totalAmount
                 : // Le port ne revient au vendeur que s'il expédie par ses
                   // propres moyens : quand la plateforme achète l'étiquette,
-                  // elle a déjà payé le transporteur avec cet argent.
-                  order.itemAmount + (shipment ? 0 : order.shippingAmount),
+                  // elle a déjà payé le transporteur avec cet argent. En
+                  // convoyage il ne lui revient pas davantage — c'est l'archer
+                  // qui a fait la route qui le touche.
+                  order.itemAmount
+                    + (shipment
+                      ? 0
+                      : order.shippingAmount - (order.carrierAmount ?? 0)),
             )}
             fort
           />
           {side === 'seller' && shipment ? (
             <Text style={styles.aide}>
               Les frais de port ont servi à payer votre étiquette.
+            </Text>
+          ) : null}
+          {side === 'seller' && order.shippingMode === 'archer' ? (
+            <Text style={styles.aide}>
+              La participation aux frais revient au convoyeur, après la livraison.
             </Text>
           ) : null}
         </View>
@@ -317,6 +342,39 @@ export default function OrderScreen() {
               {order.trackingCarrier ? `${order.trackingCarrier} · ` : ''}
               {order.trackingNumber}
             </Text>
+          </View>
+        ) : null}
+
+        {/* Convoyage entre archers : deux codes, un à chaque bout */}
+        {order.shippingMode === 'archer'
+          && (order.status === 'paid' || order.status === 'shipped') ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Convoyage entre archers</Text>
+            {side === 'seller' ? (
+              <>
+                <Text style={styles.aide}>
+                  {order.status === 'paid'
+                    ? 'Donnez ce code au convoyeur au moment où vous lui remettez le colis, pas avant : c’est ce qui prouve que le départ a eu lieu.'
+                    : 'Le colis est parti. Le convoyeur en répond jusqu’à la livraison.'}
+                </Text>
+                {order.status === 'paid' ? (
+                  <Text style={styles.code}>{pickupCode ?? '••••'}</Text>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <Text style={styles.aide}>
+                  {order.status === 'paid'
+                    ? 'Le convoyeur récupère l’arc chez le vendeur, puis vous l’apporte. Vous lui donnerez ce code à ce moment-là, une fois l’arc entre vos mains.'
+                    : 'L’arc est entre les mains du convoyeur. Donnez-lui ce code quand il vous le remettra, et pas avant.'}
+                </Text>
+                <Text style={styles.code}>{handoverCode ?? '••••'}</Text>
+                <Text style={styles.aide}>
+                  Si l’arc n’arrive pas ou arrive cassé, vous êtes remboursé : c’est nous qui en
+                  répondons, pas le convoyeur.
+                </Text>
+              </>
+            )}
           </View>
         ) : null}
 
@@ -366,7 +424,9 @@ export default function OrderScreen() {
 
         {/* Actions du vendeur */}
         {side === 'seller' && order.paymentMode === 'escrow' && order.status === 'paid' ? (
-          order.shippingMode !== 'hand' ? (
+          // Un convoyage n'a pas d'étiquette à imprimer : le colis change de
+          // mains, et ce sont les deux codes qui en tiennent lieu.
+          order.shippingMode !== 'hand' && order.shippingMode !== 'archer' ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Expédier</Text>
               {shipment ? (

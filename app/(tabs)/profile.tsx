@@ -267,6 +267,21 @@ export default function ProfileScreen() {
 
           <Pressable
             accessibilityRole="button"
+            onPress={() => router.push('/trips')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="map-marker-path" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Mes trajets</Text>
+              <Text style={styles.settingHint}>
+                Vous allez à une compétition ? Faites voyager l’arc d’un autre archer.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
             onPress={() => router.push('/account/address')}
             style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
           >

@@ -43,11 +43,18 @@ interface BanFeature {
 export async function suggestAddresses(
   query: string,
   signal?: AbortSignal,
+  /**
+   * `municipality` ne rend que des communes. Pour un trajet, une voie précise
+   * n'apporte rien et encombre : on part d'une ville, on va dans une autre.
+   */
+  type?: 'municipality',
 ): Promise<AddressSuggestion[]> {
   const texte = query.trim();
   if (texte.length < 3) return [];
 
-  const url = `${BAN}?q=${encodeURIComponent(texte)}&limit=5&autocomplete=1`;
+  const url =
+    `${BAN}?q=${encodeURIComponent(texte)}&limit=5&autocomplete=1` +
+    (type ? `&type=${type}` : '');
   const response = await fetch(url, { signal });
   if (!response.ok) return [];
 

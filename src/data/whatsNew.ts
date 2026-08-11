@@ -38,6 +38,11 @@ export const NOUVEAUTES: Nouveautes = {
         'Au-dessus de 100 €, le colis est assuré pour le prix de l’arc, assurance comprise dans le port. Un transporteur ne rembourse sinon que 23 € le kilo.',
     },
     {
+      icon: 'map-marker-path',
+      texte:
+        'Un arc trop long ou trop fragile pour un transporteur ? Un archer qui fait la route peut le porter, contre une participation à ses frais.',
+    },
+    {
       icon: 'bell-ring-outline',
       texte:
         'Enregistrez une recherche et soyez prévenu dès qu’une annonce y correspond.',

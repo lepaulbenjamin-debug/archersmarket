@@ -22,12 +22,15 @@ export function AddressField({
   onChangeText,
   onSelect,
   label = 'Adresse',
+  municipality = false,
   ...rest
 }: {
   value: string;
   onChangeText: (value: string) => void;
   onSelect: (suggestion: AddressSuggestion) => void;
   label?: string;
+  /** Ne proposer que des communes, sans voie ni numéro. */
+  municipality?: boolean;
 } & Omit<React.ComponentProps<typeof Field>, 'label' | 'value' | 'onChangeText'>) {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +48,9 @@ export function AddressField({
       enCours.current = controleur;
       setLoading(true);
       try {
-        setSuggestions(await suggestAddresses(value, controleur.signal));
+        setSuggestions(
+          await suggestAddresses(value, controleur.signal, municipality ? 'municipality' : undefined),
+        );
       } catch {
         // Réseau absent ou requête annulée : on se tait, la saisie manuelle
         // reste possible et c'est elle qui fait foi.
@@ -55,7 +60,7 @@ export function AddressField({
     }, 300);
 
     return () => clearTimeout(minuteur);
-  }, [value, touched]);
+  }, [value, touched, municipality]);
 
   const choisir = (suggestion: AddressSuggestion) => {
     setSuggestions([]);

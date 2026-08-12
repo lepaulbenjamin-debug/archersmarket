@@ -1,4 +1,4 @@
-import { fail, supabase } from '@/services/supabase';
+import { edgeBody, fail, supabase } from '@/services/supabase';
 import type { Cents } from '@/services/payments';
 
 /**
@@ -200,19 +200,6 @@ export interface RelayPoint {
   longitude: number | null;
   phone: string | null;
   hours: RelayOpeningDay[];
-}
-
-/**
- * Une fonction Edge en erreur place son message dans le corps de la réponse.
- * Sans cette lecture, « aucun transporteur ne dessert cette adresse » se
- * réduirait à « une erreur est survenue ».
- */
-async function edgeBody(error: unknown): Promise<Record<string, any> | null> {
-  try {
-    return await (error as { context?: Response })?.context?.clone().json();
-  } catch {
-    return null;
-  }
 }
 
 async function edgeMessage(error: unknown, fallback: string): Promise<string> {

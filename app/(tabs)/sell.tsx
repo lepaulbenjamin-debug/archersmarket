@@ -24,6 +24,8 @@ import { Field } from '@/components/Field';
 import { Header, Screen } from '@/components/Screen';
 import { categories, categoryById, conditions, handednessOptions } from '@/data/catalog';
 import { consumeImportDraft } from '@/services/importListing';
+import { draftFromPhoto, type PriceRange } from '@/services/photoDraft';
+import { formatCents } from '@/services/payments';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
@@ -59,6 +61,9 @@ export default function SellScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [imported, setImported] = useState(false);
+  const [analysing, setAnalysing] = useState(false);
+  const [priceRange, setPriceRange] = useState<PriceRange | null>(null);
+  const [damage, setDamage] = useState<string | null>(null);
 
   const activeCategory = useMemo(() => categoryById(category), [category]);
 
@@ -121,6 +126,44 @@ export default function SellScreen() {
       </Screen>
     );
   }
+
+  /**
+   * Remplit le formulaire à partir d'une photo.
+   *
+   * Ce qui est rempli l'est parce que la photo le montrait ; ce qui manque
+   * reste vide plutôt que d'être deviné. Deux champs ne sont jamais touchés :
+   * la latéralité — qu'une photo prise de l'autre côté inverse — et le prix,
+   * qui reste une suggestion affichée à côté du champ, pas une valeur posée
+   * dans le champ.
+   */
+  const remplirDepuisPhoto = async () => {
+    setAnalysing(true);
+    try {
+      const draft = await draftFromPhoto();
+      if (!draft) return;
+
+      if (draft.category) choisirCategorie(draft.category);
+      if (draft.brand) setBrand(draft.brand);
+      if (draft.condition) setCondition(draft.condition);
+      if (draft.title) setTitle(draft.title.slice(0, 80));
+      if (draft.description) setDescription(draft.description);
+
+      const trouves: Record<string, string> = {};
+      for (const [cle, valeur] of Object.entries(draft.specs)) {
+        if (valeur) trouves[cle] = valeur;
+      }
+      if (Object.keys(trouves).length) setSpecs((prev) => ({ ...prev, ...trouves }));
+
+      setPriceRange(draft.price);
+      setDamage(draft.damage);
+      setPhotos((prev) => (prev.includes(draft.uri) ? prev : [...prev, draft.uri].slice(0, 4)));
+      setErrors({});
+    } catch (error) {
+      Alert.alert('Analyse impossible', (error as Error).message);
+    } finally {
+      setAnalysing(false);
+    }
+  };
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -282,6 +325,30 @@ export default function SellScreen() {
                 </View>
               ))}
             </ScrollView>
+
+            <Button
+              label={analysing ? 'Lecture de la photo…' : 'Remplir depuis une photo'}
+              variant="secondary"
+              icon="text-recognition"
+              size="sm"
+              onPress={remplirDepuisPhoto}
+              loading={analysing}
+            />
+            <Text style={styles.aide}>
+              La photo est envoyée à notre prestataire d’analyse d’images pour en tirer un
+              brouillon. Rien n’est publié : vous relisez et corrigez avant d’envoyer. La
+              latéralité et le prix ne sont jamais déduits d’une image.
+            </Text>
+
+            {damage ? (
+              <View style={styles.alerte}>
+                <MaterialCommunityIcons name="alert-outline" size={18} color={colors.danger} />
+                <Text style={styles.alerteText}>
+                  Dommage repéré sur la photo : {damage}. Décrivez-le dans l’annonce — un
+                  matériel dont la sécurité est en cause ne peut pas être vendu sans le dire.
+                </Text>
+              </View>
+            ) : null}
           </Group>
 
           <Field
@@ -378,6 +445,11 @@ export default function SellScreen() {
               value={price}
               onChangeText={setPrice}
               error={errors.price}
+              hint={
+                priceRange
+                  ? `${formatCents(priceRange.low)} à ${formatCents(priceRange.high)} sur ${priceRange.sample} annonces`
+                  : undefined
+              }
             />
             <Field
               containerStyle={styles.flex}
@@ -468,6 +540,15 @@ function Group({
 }
 
 const styles = StyleSheet.create({
+  aide: { fontSize: 12, color: colors.textMuted, lineHeight: 18 },
+  alerte: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  alerteText: { flex: 1, fontSize: 12, color: colors.text, lineHeight: 18 },
   parcel: { gap: 6 },
   parcelGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
   parcelChip: {

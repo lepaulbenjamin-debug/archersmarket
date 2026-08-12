@@ -50,3 +50,16 @@ export function fail(error: { message: string; code?: string } | null, fallback:
   }
   throw new Error(detail ? `${fallback} (${detail})` : fallback);
 }
+
+/**
+ * Une fonction Edge en erreur place son message dans le corps de la réponse.
+ * Sans cette lecture, « aucun transporteur ne dessert cette adresse » se
+ * réduirait à « une erreur est survenue ».
+ */
+export async function edgeBody(error: unknown): Promise<Record<string, any> | null> {
+  try {
+    return await (error as { context?: Response })?.context?.clone().json();
+  } catch {
+    return null;
+  }
+}

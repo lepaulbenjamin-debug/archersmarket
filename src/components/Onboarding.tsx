@@ -22,11 +22,17 @@ const { width } = Dimensions.get('window');
  * soixante-dix-huit marques » ne dit rien à personne ; « vous achetez
  * compatible du premier coup », si.
  *
- * Les quatre écrans parlent à l'acheteur, qui vient d'installer et regarde.
- * Le dernier, juste avant l'inscription, répond à la seule question qui
- * l'arrête vraiment : « et si je me fais avoir ? » On y parle donc de ce que
- * son argent devient, et non de ce qu'il nous coûte — le tarif se lit au
- * moment de payer, où il est vérifiable ; ici il ne rassure personne.
+ * Les quatre premiers écrans parlent à l'acheteur, qui vient d'installer et
+ * regarde. Le quatrième répond à la seule question qui l'arrête vraiment :
+ * « et si je me fais avoir ? » On y parle donc de ce que son argent devient,
+ * et non de ce qu'il nous coûte — le tarif se lit au moment de payer, où il
+ * est vérifiable ; ici il ne rassure personne.
+ *
+ * Le dernier s'adresse au vendeur, juste avant l'inscription : c'est de lui
+ * que ce marché a le plus besoin, et ce qui le retient n'est pas le prix mais
+ * la corvée. Expédier 130 cm est une vraie difficulté — beaucoup de
+ * transporteurs plafonnent bien en dessous — et c'est nous qui la portons :
+ * la cotation écarte les offres irréalisables avant de les montrer.
  *
  * Rien ici qu'on ne puisse tenir. Promettre ce qu'on ne fait pas se paie au
  * premier litige. D'où le « quatorze jours » : le séquestre a une fin, et un
@@ -76,6 +82,18 @@ const ECRANS = [
       'Un doute, une casse ? Vous gelez les fonds tant que rien n’est réglé',
       'En main propre, vous ne réglez le vendeur qu’après avoir tiré l’arc',
       'Protégé quel que soit le prix, là où ailleurs ça s’arrête à 2 500 €',
+    ],
+  },
+  {
+    icon: 'truck-check-outline',
+    titre: 'On trouve qui prend votre colis',
+    texte:
+      'Branches, tube de flèches, arc en valise : on ne propose que les transporteurs qui acceptent la longueur.',
+    points: [
+      'Vous indiquez le format, l’acheteur voit le prix réel et choisit',
+      'L’étiquette, c’est nous qui l’achetons : rien à avancer, aucun compte à ouvrir',
+      'Vous imprimez, vous déposez, le suivi se met à jour tout seul',
+      'Au-delà de 100 €, le colis part assuré, compris dans le prix',
     ],
   },
 ] as const;

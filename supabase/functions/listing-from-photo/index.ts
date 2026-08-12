@@ -40,6 +40,8 @@ const MODELE = 'claude-opus-5';
 const TAILLE_MAX = 6 * 1024 * 1024;
 
 interface Brouillon {
+  is_archery_equipment: boolean;
+  damage_visible: boolean;
   category: string;
   brand: string;
   model_name: string;
@@ -63,8 +65,9 @@ Règles, dans l'ordre d'importance :
 3. La marque et l'état doivent venir des listes imposées. Si la marque n'est pas lisible ou n'est pas dans la liste, réponds "Autre".
 4. Le titre fait moins de 70 caractères, en français, et suit la forme « Marque Modèle, précision utile » — sans majuscules superflues ni point final.
 5. La description fait deux ou trois phrases : ce que c'est, ce que la photo montre de son état, ce qu'un acheteur doit savoir. Pas de superlatif, pas d'invention, pas de prix.
-6. Si tu vois un dommage qui touche à la sécurité — branche délaminée, poignée fendue, arc fendu, corde effilochée — décris-le dans "damage". Sinon, chaîne vide.
-7. Ne déduis jamais la latéralité (droitier / gaucher). Ce champ n'existe pas dans ta réponse : c'est voulu.`;
+6. "is_archery_equipment" est faux dès que la photo ne montre pas du matériel de tir à l'arc à vendre : une personne, un paysage, une illustration, une estampe, un écran. Dans ce cas remplis le reste comme tu peux, il sera ignoré.
+7. "damage_visible" n'est vrai que si tu vois un dommage qui touche à la sécurité : branche délaminée, poignée fendue, arc fendu, corde effilochée. Ne remplis "damage" que dans ce cas, en une phrase française. Quand "damage_visible" est faux, "damage" doit être la chaîne vide — n'y écris jamais autre chose.
+8. Ne déduis jamais la latéralité (droitier / gaucher). Ce champ n'existe pas dans ta réponse : c'est voulu.`;
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -140,6 +143,21 @@ Deno.serve(async (request) => {
     if (!texte || texte.type !== 'text') throw new Error('Réponse illisible du modèle.');
     const brut = JSON.parse(texte.text) as Brouillon;
 
+    // Une photo qui ne montre pas de matériel ne donne pas d'annonce, et ne
+    // se facture pas au vendeur : l'analyse réservée plus haut est rendue.
+    // Éprouvé sur une estampe japonaise d'un atelier de flèches, que le
+    // modèle rangeait consciencieusement dans « Flèches & tubes ».
+    if (!brut.is_archery_equipment) {
+      await db.from('photo_analyses').delete().eq('id', analyseId);
+      return json(
+        {
+          error: 'Cette photo ne montre pas de matériel de tir à l’arc. Reprenez-la de plus près.',
+          notEquipment: true,
+        },
+        422,
+      );
+    }
+
     // Deuxième filet, après le schéma : on ne fait confiance ni à l'un ni à
     // l'autre seul. Tout ce qui n'est pas dans nos listes disparaît.
     const dansLaListe = (valeur: string, liste: string[]) =>
@@ -173,7 +191,7 @@ Deno.serve(async (request) => {
         spine: brut.spine?.trim() || null,
         size: brut.size?.trim() || null,
       },
-      damage: brut.damage?.trim() || null,
+      damage: dommageLisible(brut),
       price: Array.isArray(prix) && prix.length > 0 ? prix[0] : null,
       analysesLeft: Number(restant ?? 0),
     });
@@ -182,6 +200,24 @@ Deno.serve(async (request) => {
     return json({ error: (error as Error).message }, 400);
   }
 });
+
+/**
+ * Le texte du dommage, ou rien.
+ *
+ * Ce champ est le seul qui ressorte à l'écran comme un avertissement de
+ * sécurité, et c'est celui où le modèle a produit du charabia — « Dracontin
+ * чasteлив » sur une photo sans le moindre défaut. Un champ obligatoire qu'on
+ * n'a rien à remplir invite à le remplir quand même : on exige donc un booléen
+ * à côté, et on jette tout ce qui ne ressemble pas à une phrase française.
+ */
+function dommageLisible(brouillon: Brouillon): string | null {
+  if (!brouillon.damage_visible) return null;
+  const texte = (brouillon.damage ?? '').trim();
+  if (texte.length < 10 || texte.length > 300) return null;
+  // Lettres latines, chiffres et ponctuation courante : rien d'autre.
+  if (!/^[\p{Script=Latin}\p{N}\s.,;:'’()«»°%/-]+$/u.test(texte)) return null;
+  return texte;
+}
 
 /**
  * Le schéma que le modèle est contraint de remplir.
@@ -196,10 +232,19 @@ function schemaDuBrouillon(categories: string[], conditions: string[], brands: s
     type: 'object',
     additionalProperties: false,
     required: [
-      'category', 'brand', 'model_name', 'condition', 'title', 'description',
-      'draw_weight', 'bow_length', 'draw_length', 'spine', 'size', 'damage',
+      'is_archery_equipment', 'category', 'brand', 'model_name', 'condition',
+      'title', 'description', 'draw_weight', 'bow_length', 'draw_length',
+      'spine', 'size', 'damage_visible', 'damage',
     ],
     properties: {
+      is_archery_equipment: {
+        type: 'boolean',
+        description: 'Vrai seulement si la photo montre du matériel de tir à l’arc à vendre.',
+      },
+      damage_visible: {
+        type: 'boolean',
+        description: 'Vrai seulement si un dommage touchant à la sécurité est visible.',
+      },
       category: { type: 'string', enum: categories, description: 'La catégorie du matériel.' },
       brand: {
         type: 'string',
@@ -219,7 +264,7 @@ function schemaDuBrouillon(categories: string[], conditions: string[], brands: s
       draw_length: texte('Allonge en pouces, uniquement si elle est lisible sur la photo.'),
       spine: texte('Spine des tubes, uniquement s’il est lisible sur la photo.'),
       size: texte('Taille, uniquement si elle est lisible sur la photo.'),
-      damage: texte('Dommage visible touchant à la sécurité, ou chaîne vide.'),
+      damage: texte('Le dommage en une phrase française, uniquement si « damage_visible » est vrai. Chaîne vide sinon.'),
     },
   };
 }

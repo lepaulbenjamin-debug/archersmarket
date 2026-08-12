@@ -80,6 +80,9 @@ export async function draftFromPhoto(): Promise<PhotoDraft | null> {
     body: { photo: asset.base64, mimeType: asset.mimeType ?? 'image/jpeg' },
   });
   if (error) {
+    // Une photo qui ne montre pas de matériel n'est pas un échec technique :
+    // le serveur l'a reconnue comme telle, n'a rien décompté du quota, et le
+    // message dit quoi faire. On le remonte tel quel.
     const corps = await edgeBody(error);
     throw new Error(corps?.error ?? 'Analyse impossible pour le moment.');
   }

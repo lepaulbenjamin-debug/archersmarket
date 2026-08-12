@@ -22,12 +22,15 @@ const { width } = Dimensions.get('window');
  * soixante-dix-huit marques » ne dit rien à personne ; « vous achetez
  * compatible du premier coup », si.
  *
- * Les trois premiers écrans parlent à l'acheteur, qui vient d'installer et
- * regarde. Le dernier s'adresse au vendeur, juste avant l'inscription : c'est
- * de lui que ce marché a le plus besoin.
+ * Les quatre écrans parlent à l'acheteur, qui vient d'installer et regarde.
+ * Le dernier, juste avant l'inscription, répond à la seule question qui
+ * l'arrête vraiment : « et si je me fais avoir ? » On y parle donc de ce que
+ * son argent devient, et non de ce qu'il nous coûte — le tarif se lit au
+ * moment de payer, où il est vérifiable ; ici il ne rassure personne.
  *
  * Rien ici qu'on ne puisse tenir. Promettre ce qu'on ne fait pas se paie au
- * premier litige.
+ * premier litige. D'où le « quatorze jours » : le séquestre a une fin, et un
+ * acheteur qui l'apprend le jour du virement l'aurait mal pris.
  */
 const ECRANS = [
   {
@@ -64,14 +67,15 @@ const ECRANS = [
     ],
   },
   {
-    icon: 'handshake-outline',
-    titre: 'Essayez au club, ou faites livrer',
+    icon: 'lock-check-outline',
+    titre: 'Le vendeur n’est payé qu’après vous',
     texte:
-      'Un arc doit vous aller. Tirez quelques volées avant de valider — ou faites-le venir, même en 130 cm.',
+      'Vous réglez à la commande, mais la somme reste chez nous tant que l’arc n’est pas chez vous.',
     points: [
-      '0,99 € en main propre, avec un code donné après essai',
-      'Des frais dégressifs : 5 % jusqu’à 300 €, puis 2,5 %',
-      'Aucun plafond, là où ailleurs la protection s’arrête à 2 500 €',
+      'Le virement part à votre confirmation, ou quatorze jours après l’envoi',
+      'Un doute, une casse ? Vous gelez les fonds tant que rien n’est réglé',
+      'En main propre, vous ne réglez le vendeur qu’après avoir tiré l’arc',
+      'Protégé quel que soit le prix, là où ailleurs ça s’arrête à 2 500 €',
     ],
   },
 ] as const;

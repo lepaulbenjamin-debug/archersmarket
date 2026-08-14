@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -44,6 +45,8 @@ export default function ImportScreen() {
   const [url, setUrl] = useState('');
   const [pasted, setPasted] = useState('');
   const [showPaste, setShowPaste] = useState(Platform.OS === 'web');
+  /** Un lien attend dans le presse-papiers : on peut le proposer. */
+  const [pressePapiers, setPressePapiers] = useState(false);
   const [phase, setPhase] = useState<Phase>('form');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportedListing | null>(null);
@@ -71,10 +74,13 @@ export default function ImportScreen() {
     [stopBrowsing],
   );
 
-  const browse = () => {
+  const browse = (depuis?: string) => {
     // Repassé au filtre : le champ peut encore contenir une phrase si le
-    // collage s'est fait sans espace avant le lien.
-    const value = extractUrl(url) ?? url.trim();
+    // collage s'est fait sans espace avant le lien. Le paramètre sert au
+    // collage automatique, qui ne peut pas attendre le prochain rendu pour
+    // lire ce qu'il vient de poser dans l'état.
+    const brut = depuis ?? url;
+    const value = extractUrl(brut) ?? brut.trim();
     if (!isSupportedUrl(value)) {
       setError('Aucun lien reconnu. Collez le message entier si vous voulez, on ira chercher l’adresse dedans.');
       return;
@@ -103,6 +109,53 @@ export default function ImportScreen() {
    */
   const collerLien = (texte: string) => {
     setUrl(/\s/.test(texte) ? extractUrl(texte) ?? texte : texte);
+  };
+
+  /**
+   * Propose le lien déjà copié, sans jamais lire le presse-papiers de
+   * lui-même.
+   *
+   * `hasStringAsync` répond par oui ou non sans livrer le contenu, et sans
+   * déclencher la bannière « Archers Market a collé depuis Safari » qu'iOS
+   * affiche à chaque lecture réelle. On ne lit qu'au moment où l'utilisateur
+   * appuie : c'est lui qui décide, et il le voit.
+   *
+   * `hasUrlAsync` aurait été plus précis, mais il répond sur la nature de ce
+   * que contient le presse-papiers, pas sur ce qu'on peut en tirer — et ce que
+   * leboncoin y met est une phrase, pas une adresse. Le cas qui nous intéresse
+   * est justement celui qu'il risquait d'écarter.
+   *
+   * Revérifié à chaque retour sur l'écran : on en sort souvent pour aller
+   * copier le lien, et le bouton doit être là au retour.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      let vivant = true;
+      Clipboard.hasStringAsync()
+        .then((present) => {
+          if (vivant) setPressePapiers(present);
+        })
+        .catch(() => undefined);
+      return () => {
+        vivant = false;
+      };
+    }, []),
+  );
+
+  const collerDepuisPressePapiers = async () => {
+    try {
+      const contenu = await Clipboard.getStringAsync();
+      const lien = extractUrl(contenu);
+      if (!lien) {
+        setPressePapiers(false);
+        setError('Ce qui est copié ne contient pas de lien. Copiez l’annonce depuis son bouton « partager ».');
+        return;
+      }
+      setUrl(lien);
+      browse(lien);
+    } catch {
+      setPressePapiers(false);
+    }
   };
 
   const onMessage = (event: WebViewMessageEvent) => {
@@ -193,10 +246,21 @@ export default function ImportScreen() {
                     editable={phase !== 'loading'}
                     hint="Le message entier fait l’affaire : « Voici une annonce… : https://… »."
                   />
+                  {/* Proposé seulement quand il y a effectivement un lien à
+                      coller : un bouton qui échoue une fois sur deux ne se
+                      fait plus toucher. */}
+                  {pressePapiers && phase !== 'loading' ? (
+                    <Button
+                      label="Coller le lien copié"
+                      icon="clipboard-text-outline"
+                      variant="secondary"
+                      onPress={collerDepuisPressePapiers}
+                    />
+                  ) : null}
                   <Button
                     label={phase === 'loading' ? 'Lecture de la page…' : 'Lire l’annonce'}
                     icon="download-outline"
-                    onPress={browse}
+                    onPress={() => browse()}
                     loading={phase === 'loading'}
                   />
                   {phase === 'loading' ? (

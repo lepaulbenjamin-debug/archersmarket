@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { AddressField } from '@/components/AddressField';
 import { Button } from '@/components/Button';
+import { DateField, isoAujourdhui } from '@/components/DateField';
 import { Field } from '@/components/Field';
 import { Header, Screen } from '@/components/Screen';
 import { formatCents } from '@/services/payments';
@@ -31,7 +32,9 @@ export default function NewTripScreen() {
   const [busy, setBusy] = useState(false);
 
   const centimes = Math.round(Number(participation.replace(',', '.')) * 100) || 0;
-  const dateValide = /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= aujourdhui();
+  // Le calendrier ne laisse pas choisir dans le passé, mais un écran laissé
+  // ouvert toute la nuit, si : la veille reste affichée, et il est minuit.
+  const dateValide = date !== '' && date >= isoAujourdhui();
 
   const complet =
     depart.cp.length === 5 && depart.ville.length >= 2
@@ -89,15 +92,12 @@ export default function NewTripScreen() {
           municipality
         />
 
-        <Field
+        <DateField
           label="Date du départ"
-          placeholder={aujourdhui()}
           value={date}
-          onChangeText={setDate}
-          keyboardType="numbers-and-punctuation"
-          autoCorrect={false}
-          hint="Au format 2026-08-15."
-          error={date && !dateValide ? 'Date passée ou mal écrite.' : undefined}
+          onChange={setDate}
+          hint="Le trajet reste proposé aux archers jusqu’au jour du départ."
+          error={date && !dateValide ? 'Cette date est passée.' : undefined}
         />
 
         <View style={styles.bloc}>
@@ -163,8 +163,6 @@ export default function NewTripScreen() {
     </Screen>
   );
 }
-
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },

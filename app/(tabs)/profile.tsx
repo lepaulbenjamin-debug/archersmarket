@@ -22,6 +22,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { Rating } from '@/components/Rating';
 import { ReviewList } from '@/components/ReviewList';
 import { Header, Screen } from '@/components/Screen';
+import { dac7Status, type Dac7Status } from '@/services/dac7';
 import { fetchPendingReviews, fetchReviews } from '@/services/reviews';
 import { convoyageDemand, type ConvoyageDemand } from '@/services/trips';
 import { colors, radius, spacing } from '@/theme';
@@ -44,6 +45,7 @@ export default function ProfileScreen() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [sellingListingId, setSellingListingId] = useState<string | null>(null);
   const [convoyage, setConvoyage] = useState<ConvoyageDemand | null>(null);
+  const [dac7, setDac7] = useState<Dac7Status | null>(null);
   const { enabled: pushEnabled, unavailable: pushUnavailable, toggle: togglePush } = usePush();
 
   const myListings = useMemo(
@@ -58,6 +60,7 @@ export default function ProfileScreen() {
       fetchPendingReviews(user.id).then(setPending).catch(() => setPending([]));
       fetchReviews(user.id).then(setReviews).catch(() => setReviews([]));
       convoyageDemand().then(setConvoyage).catch(() => setConvoyage(null));
+      dac7Status().then(setDac7).catch(() => setDac7(null));
     }, [user]),
   );
 
@@ -235,6 +238,39 @@ export default function ProfileScreen() {
             </View>
             <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
           </Pressable>
+
+          {/* Rangée réservée aux vendeurs : la déclaration ne concerne
+              personne d'autre, et un acheteur qui lirait « fiscal » dans son
+              compte se demanderait ce qu'on lui veut. */}
+          {user.acceptsPayments || dac7?.reportable ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/account/dac7')}
+              style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+            >
+              <MaterialCommunityIcons
+                name={dac7?.reportable && !dac7.complete ? 'file-alert-outline' : 'file-document-outline'}
+                size={19}
+                color={dac7?.reportable && !dac7.complete ? colors.danger : colors.text}
+              />
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>Déclaration fiscale</Text>
+                <Text style={styles.settingHint}>
+                  {dac7?.reportable && !dac7.complete
+                    ? `Vos ventes dépassent le seuil légal : sans votre numéro fiscal, les virements seront suspendus sous ${dac7.graceDays} jours.`
+                    : dac7?.reportable
+                      ? 'Votre dossier est complet. Rien à faire.'
+                      : `Rien à faire tant que vous restez sous ${dac7?.salesThreshold ?? 30} ventes par an.`}
+                </Text>
+              </View>
+              {dac7?.reportable && !dac7.complete ? (
+                <View style={[styles.pastille, styles.pastilleAlerte]}>
+                  <Text style={styles.pastilleTexte}>!</Text>
+                </View>
+              ) : null}
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
 
           {user.isModerator ? (
             <Pressable
@@ -581,6 +617,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  pastilleAlerte: { backgroundColor: colors.danger },
   pastilleTexte: { fontSize: 12.5, fontWeight: '800', color: colors.onPrimary },
   signOut: { marginTop: spacing.sm },
   deleteRow: { alignItems: 'center', paddingVertical: spacing.sm },

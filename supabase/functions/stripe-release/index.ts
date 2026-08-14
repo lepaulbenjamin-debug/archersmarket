@@ -133,6 +133,16 @@ Deno.serve(async (request) => {
           continue;
         }
 
+        // DAC7 : au-delà du seuil, un vendeur qui n'a rien fourni après
+        // relances doit voir son paiement suspendu. Suspendu, pas perdu — la
+        // somme reste en séquestre et partira au balayage suivant, le jour où
+        // il complétera son dossier.
+        const { data: retenir } = await db.rpc('dac7_retenir', { seller: order.seller_id });
+        if (retenir === true) {
+          resultats.push({ order: order.id, ok: false, detail: 'DAC7 : dossier fiscal manquant' });
+          continue;
+        }
+
         // Le port ne suit que s'il est resté dans la poche du vendeur — et
         // en convoyage il n'y reste pas non plus : la participation revient à
         // l'archer qui a fait la route.
@@ -210,7 +220,23 @@ Deno.serve(async (request) => {
       }
     }
 
-    return json({ examinees: aTraiter.length, arrieres: arrieres?.length ?? 0, resultats });
+    // Les relances fiscales voyagent avec le balayage plutôt que sur leur
+    // propre horloge : c'est le même rythme, et un planificateur de moins.
+    // Leur échec ne compromet pas les virements, qui sont déjà passés.
+    let relances = 0;
+    try {
+      const { data } = await db.rpc('dac7_relancer');
+      relances = Number(data ?? 0);
+    } catch (error) {
+      console.error('relances DAC7 :', error);
+    }
+
+    return json({
+      examinees: aTraiter.length,
+      arrieres: arrieres?.length ?? 0,
+      relances,
+      resultats,
+    });
   } catch (error) {
     console.error('stripe-release', error);
     return json({ error: (error as Error).message }, 500);

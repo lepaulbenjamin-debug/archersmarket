@@ -79,6 +79,7 @@ function RootNavigator() {
         <Stack.Screen name="account/setup" />
         <Stack.Screen name="account/address" />
         <Stack.Screen name="account/alerts" />
+        <Stack.Screen name="account/dac7" />
         <Stack.Screen name="trips/index" />
         <Stack.Screen name="trips/new" />
         <Stack.Screen name="order/[id]" />

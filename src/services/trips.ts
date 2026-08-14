@@ -285,20 +285,24 @@ export async function tripsFromArea(listingId: string): Promise<number> {
 }
 
 export interface ConvoyageDemand {
-  /** Les départements où l'on sait que ce membre passe. */
-  departments: string[];
-  /** Annonces qui pourraient partir de là, les siennes exclues. */
+  /** Les codes postaux d'où l'on sait que ce membre part. */
+  zips: string[];
+  /** Annonces à portée de l'un d'eux, les siennes exclues. */
   listings: number;
+  /** Le rayon retenu, en kilomètres. Décidé en base, affiché tel quel. */
+  radiusKm: number;
 }
 
 /** Ce qu'un convoyeur a à gagner à déclarer un trajet. */
 export async function convoyageDemand(): Promise<ConvoyageDemand> {
+  const vide = { zips: [], listings: 0, radiusKm: 0 };
   const { data, error } = await supabase.rpc('convoyage_demand');
-  if (error) return { departments: [], listings: 0 };
-  const brut = (data ?? {}) as { departments?: unknown; listings?: unknown };
+  if (error) return vide;
+  const brut = (data ?? {}) as { zips?: unknown; listings?: unknown; radius_km?: unknown };
   return {
-    departments: Array.isArray(brut.departments) ? brut.departments.map(String) : [],
+    zips: Array.isArray(brut.zips) ? brut.zips.map(String) : [],
     listings: Number(brut.listings ?? 0),
+    radiusKm: Number(brut.radius_km ?? 0),
   };
 }
 

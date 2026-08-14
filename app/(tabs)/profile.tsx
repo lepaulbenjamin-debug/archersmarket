@@ -282,9 +282,9 @@ export default function ProfileScreen() {
                   l'invitation quand on ignore où il est. */}
               <Text style={styles.settingHint}>
                 {convoyage && convoyage.listings > 0
-                  ? `${convoyage.listings} ${convoyage.listings === 1 ? 'annonce pourrait partir' : 'annonces pourraient partir'} de votre secteur. Déclarez un trajet pour les porter.`
-                  : convoyage && convoyage.departments.length > 0
-                    ? 'Rien à porter depuis votre secteur en ce moment. Déclarez un trajet, il sera proposé aux acheteurs.'
+                  ? `${convoyage.listings} ${convoyage.listings === 1 ? 'annonce pourrait partir' : 'annonces pourraient partir'} de moins de ${convoyage.radiusKm} km de chez vous. Déclarez un trajet pour les porter.`
+                  : convoyage && convoyage.zips.length > 0
+                    ? `Rien à porter à moins de ${convoyage.radiusKm} km de chez vous en ce moment. Déclarez un trajet, il sera proposé aux acheteurs.`
                     : 'Vous allez à une compétition ? Faites voyager l’arc d’un autre archer.'}
               </Text>
             </View>

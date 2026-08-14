@@ -355,6 +355,57 @@ export const isSupportedUrl = (value: string): boolean => {
   }
 };
 
+/**
+ * Isole le lien dans ce qui a été collé.
+ *
+ * Le bouton « partager » de leboncoin ne met pas une adresse dans le
+ * presse-papiers : il met une phrase, « Voici une annonce intéressante que je
+ * viens de trouver sur leboncoin : https://… ». Vinted et Facebook font
+ * pareil, chacun avec sa formule. Exiger une adresse nue revient à demander à
+ * l'utilisateur de faire le ménage lui-même, avec un clavier de téléphone, ce
+ * que personne n'a envie de faire.
+ *
+ * On prend le premier lien exploitable. S'il y en a plusieurs — une bannière
+ * de partage en ajoute parfois un second — le premier est celui de l'annonce
+ * dans toutes les formules relevées.
+ */
+export function extractUrl(value: string): string | null {
+  const texte = (value ?? '').trim();
+  if (!texte) return null;
+
+  // Les guillemets typographiques et les chevrons ne font jamais partie d'une
+  // adresse : les exclure ici évite d'avoir à les retirer ensuite.
+  const candidats = texte.match(/https?:\/\/[^\s<>"'«»]+/gi) ?? [];
+  for (const brut of candidats) {
+    const propre = sansPonctuationFinale(brut);
+    if (isSupportedUrl(propre)) return propre;
+  }
+  return isSupportedUrl(texte) ? texte : null;
+}
+
+/** Un lien collé en fin de phrase emporte souvent le point qui la termine. */
+function sansPonctuationFinale(lien: string): string {
+  let propre = lien;
+  while (propre && /[.,;:!?…]$/.test(propre)) {
+    propre = propre.slice(0, -1);
+  }
+  // Une parenthèse ou un crochet fermant n'appartient au lien que si son
+  // ouvrant s'y trouve aussi : « (https://exemple.fr) » contre
+  // « https://exemple.fr/a(b) ».
+  const compte = (chaine: string, caractere: string) =>
+    chaine.split(caractere).length - 1;
+  while (
+    (propre.endsWith(')') && compte(propre, '(') < compte(propre, ')'))
+    || (propre.endsWith(']') && compte(propre, '[') < compte(propre, ']'))
+  ) {
+    propre = propre.slice(0, -1);
+    while (propre && /[.,;:!?…]$/.test(propre)) {
+      propre = propre.slice(0, -1);
+    }
+  }
+  return propre;
+}
+
 // ---------------------------------------------------------------------------
 // Lecture depuis l'appareil
 //

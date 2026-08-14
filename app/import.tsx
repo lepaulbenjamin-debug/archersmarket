@@ -23,6 +23,7 @@ import {
   buildImport,
   consumeImportDraft,
   importFromPage,
+  extractUrl,
   isSupportedUrl,
   setImportDraft,
   type ImportedListing,
@@ -71,11 +72,14 @@ export default function ImportScreen() {
   );
 
   const browse = () => {
-    const value = url.trim();
+    // Repassé au filtre : le champ peut encore contenir une phrase si le
+    // collage s'est fait sans espace avant le lien.
+    const value = extractUrl(url) ?? url.trim();
     if (!isSupportedUrl(value)) {
-      setError('Collez le lien complet de l’annonce, en commençant par https://');
+      setError('Aucun lien reconnu. Collez le message entier si vous voulez, on ira chercher l’adresse dedans.');
       return;
     }
+    setUrl(value);
     setError(null);
     setPhase('loading');
     setTarget(value);
@@ -86,6 +90,19 @@ export default function ImportScreen() {
         ),
       PAGE_TIMEOUT,
     );
+  };
+
+  /**
+   * Le bouton « partager » de leboncoin ne copie pas une adresse mais une
+   * phrase qui en contient une. On fait donc le ménage à la place de
+   * l'utilisateur, plutôt que de lui renvoyer une erreur.
+   *
+   * Tant qu'il n'y a pas d'espace, c'est une saisie en cours et on n'y touche
+   * pas : un espace signe un collage, et c'est là seulement qu'il y a quelque
+   * chose à retirer.
+   */
+  const collerLien = (texte: string) => {
+    setUrl(/\s/.test(texte) ? extractUrl(texte) ?? texte : texte);
   };
 
   const onMessage = (event: WebViewMessageEvent) => {
@@ -169,11 +186,12 @@ export default function ImportScreen() {
                     label="Lien de l’annonce"
                     placeholder="https://www.leboncoin.fr/ad/sports_hobbies/…"
                     value={url}
-                    onChangeText={setUrl}
+                    onChangeText={collerLien}
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="url"
                     editable={phase !== 'loading'}
+                    hint="Le message entier fait l’affaire : « Voici une annonce… : https://… »."
                   />
                   <Button
                     label={phase === 'loading' ? 'Lecture de la page…' : 'Lire l’annonce'}

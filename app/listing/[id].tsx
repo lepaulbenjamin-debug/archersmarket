@@ -24,6 +24,7 @@ import { Screen } from '@/components/Screen';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { categoryById, conditionById, handednessLabel } from '@/data/catalog';
 import { parcelLabel } from '@/services/shipping';
+import { tripsFromArea } from '@/services/trips';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
@@ -41,6 +42,7 @@ export default function ListingScreen() {
   const { openConversation } = useMessages();
   const [imageIndex, setImageIndex] = useState(0);
   const [reporting, setReporting] = useState(false);
+  const [convoyeurs, setConvoyeurs] = useState(0);
   const viewed = useRef(false);
 
   const listing = id ? listingById(id) : undefined;
@@ -52,6 +54,23 @@ export default function ListingScreen() {
       registerView(listing.id);
     }
   }, [listing, registerView]);
+
+  // Le convoyage n'apparaissait qu'au paiement, après la saisie d'une adresse
+  // complète : personne ne pouvait deviner qu'il existait. Ce compteur le dit
+  // dès la fiche, sans rien demander.
+  useEffect(() => {
+    if (!id || !user) {
+      setConvoyeurs(0);
+      return;
+    }
+    let vivant = true;
+    tripsFromArea(id).then((n) => {
+      if (vivant) setConvoyeurs(n);
+    });
+    return () => {
+      vivant = false;
+    };
+  }, [id, user]);
 
   const similar = useMemo(
     () =>
@@ -245,6 +264,27 @@ export default function ListingScreen() {
               </View>
             ))}
           </View>
+
+          {/* Ni promesse ni engagement : on ne sait pas encore où va
+              l'acheteur, seulement qu'il y a du mouvement au départ. La
+              seconde phrase existe pour que la première ne soit pas lue
+              comme « quelqu'un va chez vous ». */}
+          {convoyeurs > 0 && !isOwner ? (
+            <View style={styles.convoyage}>
+              <MaterialCommunityIcons name="car-outline" size={20} color={colors.primary} />
+              <View style={styles.flex}>
+                <Text style={styles.convoyageTitre}>
+                  {convoyeurs === 1
+                    ? 'Un archer part de ce secteur ce mois-ci'
+                    : `${convoyeurs} archers partent de ce secteur ce mois-ci`}
+                </Text>
+                <Text style={styles.convoyageTexte}>
+                  Ils peuvent porter l’arc dans leur coffre pour quelques euros. Indiquez votre
+                  adresse au moment de l’achat pour voir si l’un d’eux passe chez vous.
+                </Text>
+              </View>
+            </View>
+          ) : null}
 
           {seller ? (
             <>
@@ -452,6 +492,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.lg,
   },
+  flex: { flex: 1 },
+  convoyage: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+  },
+  convoyageTitre: { fontSize: 14, fontWeight: '700', color: colors.text },
+  convoyageTexte: { fontSize: 12.5, color: colors.textMuted, lineHeight: 18, marginTop: 3 },
   specRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

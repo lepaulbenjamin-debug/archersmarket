@@ -23,6 +23,7 @@ import { Rating } from '@/components/Rating';
 import { ReviewList } from '@/components/ReviewList';
 import { Header, Screen } from '@/components/Screen';
 import { fetchPendingReviews, fetchReviews } from '@/services/reviews';
+import { convoyageDemand, type ConvoyageDemand } from '@/services/trips';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
@@ -42,6 +43,7 @@ export default function ProfileScreen() {
   const [pending, setPending] = useState<PendingReview[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [sellingListingId, setSellingListingId] = useState<string | null>(null);
+  const [convoyage, setConvoyage] = useState<ConvoyageDemand | null>(null);
   const { enabled: pushEnabled, unavailable: pushUnavailable, toggle: togglePush } = usePush();
 
   const myListings = useMemo(
@@ -55,6 +57,7 @@ export default function ProfileScreen() {
       if (!user) return;
       fetchPendingReviews(user.id).then(setPending).catch(() => setPending([]));
       fetchReviews(user.id).then(setReviews).catch(() => setReviews([]));
+      convoyageDemand().then(setConvoyage).catch(() => setConvoyage(null));
     }, [user]),
   );
 
@@ -272,11 +275,24 @@ export default function ProfileScreen() {
           >
             <MaterialCommunityIcons name="map-marker-path" size={19} color={colors.text} />
             <View style={styles.settingText}>
-              <Text style={styles.settingLabel}>Mes trajets</Text>
+              <Text style={styles.settingLabel}>Convoyage entre archers</Text>
+              {/* Trois états, et aucun qui invente : on annonce un nombre
+                  quand on sait d'où part ce membre, on dit franchement qu'il
+                  n'y a rien quand c'est le cas, et on se rabat sur
+                  l'invitation quand on ignore où il est. */}
               <Text style={styles.settingHint}>
-                Vous allez à une compétition ? Faites voyager l’arc d’un autre archer.
+                {convoyage && convoyage.listings > 0
+                  ? `${convoyage.listings} ${convoyage.listings === 1 ? 'annonce pourrait partir' : 'annonces pourraient partir'} de votre secteur. Déclarez un trajet pour les porter.`
+                  : convoyage && convoyage.departments.length > 0
+                    ? 'Rien à porter depuis votre secteur en ce moment. Déclarez un trajet, il sera proposé aux acheteurs.'
+                    : 'Vous allez à une compétition ? Faites voyager l’arc d’un autre archer.'}
               </Text>
             </View>
+            {convoyage && convoyage.listings > 0 ? (
+              <View style={styles.pastille}>
+                <Text style={styles.pastilleTexte}>{convoyage.listings}</Text>
+              </View>
+            ) : null}
             <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
           </Pressable>
 
@@ -556,6 +572,16 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing.sm },
   actionButton: { flex: 1, paddingHorizontal: spacing.md },
   settingDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  pastille: {
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 7,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pastilleTexte: { fontSize: 12.5, fontWeight: '800', color: colors.onPrimary },
   signOut: { marginTop: spacing.sm },
   deleteRow: { alignItems: 'center', paddingVertical: spacing.sm },
   deleteLabel: { fontSize: 13, fontWeight: '600', color: colors.danger },

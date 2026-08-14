@@ -268,6 +268,40 @@ export async function confirmDelivery(orderId: string, code: string): Promise<vo
   if (error) fail(error, 'Code incorrect.');
 }
 
+/**
+ * Combien d'archers partent du secteur de cette annonce dans le mois.
+ *
+ * Ce n'est pas une promesse de correspondance : l'acheteur n'a encore donné
+ * aucune adresse, donc on ignore où il est. Le nombre dit qu'il y a du
+ * mouvement au départ, rien de plus, et l'écran doit le dire ainsi.
+ *
+ * Un échec ne rend pas d'erreur : ce compteur est un agrément, pas un
+ * renseignement dont dépend un achat.
+ */
+export async function tripsFromArea(listingId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('trips_from_listing_area', { listing_id: listingId });
+  if (error) return 0;
+  return Number(data ?? 0);
+}
+
+export interface ConvoyageDemand {
+  /** Les départements où l'on sait que ce membre passe. */
+  departments: string[];
+  /** Annonces qui pourraient partir de là, les siennes exclues. */
+  listings: number;
+}
+
+/** Ce qu'un convoyeur a à gagner à déclarer un trajet. */
+export async function convoyageDemand(): Promise<ConvoyageDemand> {
+  const { data, error } = await supabase.rpc('convoyage_demand');
+  if (error) return { departments: [], listings: 0 };
+  const brut = (data ?? {}) as { departments?: unknown; listings?: unknown };
+  return {
+    departments: Array.isArray(brut.departments) ? brut.departments.map(String) : [],
+    listings: Number(brut.listings ?? 0),
+  };
+}
+
 /** « mercredi 13 août », pour une date de départ. */
 export function formatDepart(iso: string): string {
   const jour = new Date(`${iso}T12:00:00`);

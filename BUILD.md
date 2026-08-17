@@ -75,8 +75,16 @@ selon la machine qui compile.
 ## Envoyer sur TestFlight
 
 ```bash
-npx eas-cli submit --platform ios --profile production --path build-*.ipa
+npx eas-cli submit --platform ios --profile production --path "$(ls -t build-*.ipa | head -1)"
 ```
+
+Le fichier est nommé explicitement plutôt que par joker : dès qu'il reste un
+`.ipa` d'une compilation précédente, `--path build-*.ipa` s'étend en deux
+chemins, le second devient un argument orphelin et la commande s'arrête sur
+« Unexpected argument ». `ls -t | head -1` prend simplement le plus récent.
+
+Pensez à supprimer les anciens `.ipa` une fois envoyés : ils pèsent trente-cinq
+mégaoctets pièce et ne servent plus à rien.
 
 Apple traite le binaire pendant cinq à dix minutes, puis envoie un e-mail. La
 version apparaît ensuite dans App Store Connect, onglet TestFlight.

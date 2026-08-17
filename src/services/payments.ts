@@ -325,6 +325,27 @@ export async function startSellerOnboarding(): Promise<OnboardingState> {
   return { ready: !!payload.ready, url: payload.url };
 }
 
+/**
+ * Le lien vers le tableau de bord Stripe du vendeur.
+ *
+ * C'est là qu'il voit ses versements, corrige son IBAN et répond à une
+ * demande de justificatif. Nous ne construisons pas cet écran : le faire nous
+ * obligerait à manipuler des données bancaires que nous nous engageons à ne
+ * pas conserver.
+ *
+ * Le lien ne sert qu'une fois et expire vite. On le demande donc au moment de
+ * l'ouvrir, jamais à l'avance.
+ */
+export async function sellerDashboardUrl(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('stripe-connect', {
+    body: { action: 'dashboard' },
+  });
+  if (error) throw new Error(await edgeMessage(error, 'Tableau de bord indisponible.'));
+  const url = (data as { url?: string })?.url;
+  if (!url) throw new Error('Stripe n’a pas renvoyé de lien.');
+  return url;
+}
+
 export interface Checkout {
   orderId: string;
   clientSecret: string;

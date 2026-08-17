@@ -6,7 +6,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 
 import { Button } from '@/components/Button';
 import { Header, Screen } from '@/components/Screen';
-import { startSellerOnboarding } from '@/services/payments';
+import { sellerDashboardUrl, startSellerOnboarding } from '@/services/payments';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 
@@ -27,6 +27,7 @@ export default function PaymentSetupScreen() {
   const [ready, setReady] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   /** Relit l'état chez Stripe : c'est la seule source de vérité. */
   const refresh = useCallback(async () => {
@@ -61,6 +62,26 @@ export default function PaymentSetupScreen() {
       setError((err as Error).message);
     }
     await refresh();
+  };
+
+  /**
+   * Ouvre le tableau de bord Stripe du vendeur.
+   *
+   * Même navigateur intégré que l'inscription : le lien est à usage unique et
+   * de courte durée, le sortir de l'application le rendrait périmé avant
+   * d'être ouvert.
+   */
+  const ouvrirTableauDeBord = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const lien = await sellerDashboardUrl();
+      await WebBrowser.openAuthSessionAsync(lien, 'archersmarket://account/payment');
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -103,6 +124,22 @@ export default function PaymentSetupScreen() {
               variant="secondary"
               onPress={() => router.replace('/orders')}
             />
+            {/* « Mes ventes » d'un côté, « mon argent » de l'autre : l'écran des
+                commandes dit ce qui s'est vendu, le tableau de bord Stripe dit
+                ce qui a été versé et sur quel compte. Ce sont deux questions
+                différentes, et la seconde nous échappe volontairement. */}
+            <Button
+              label="Mes versements et mon IBAN"
+              icon="bank-outline"
+              variant="secondary"
+              onPress={ouvrirTableauDeBord}
+              loading={busy}
+            />
+            <Text style={styles.note}>
+              Vous y trouverez le détail de vos virements, la date du prochain, et de quoi corriger
+              vos coordonnées bancaires. Cette page est tenue par Stripe : nous n’avons accès ni à
+              votre IBAN ni à vos justificatifs.
+            </Text>
           </>
         ) : (
           <>

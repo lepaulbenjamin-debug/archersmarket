@@ -10,7 +10,7 @@
  * vendeur vérifié resterait indéfiniment marqué « en attente ».
  */
 import { CORS, callerId, json, serviceClient } from '../_shared/context.ts';
-import { stripeV2Request } from '../_shared/stripe.ts';
+import { stripeRequest, stripeV2Request } from '../_shared/stripe.ts';
 
 /**
  * Stripe exige une URL https : un schéma d'application est refusé. La page
@@ -47,6 +47,23 @@ const lireCompte = (account: StripeAccount) => {
 
 const INCLUDE = 'include[0]=configuration.recipient&include[1]=requirements';
 
+/**
+ * L'appelant demande-t-il son tableau de bord plutôt que son état ?
+ *
+ * Le corps est lu prudemment : l'application appelle cette fonction sans corps
+ * dans le cas courant, et `request.json()` lèverait sur une chaîne vide.
+ */
+async function veutLeTableauDeBord(request: Request): Promise<boolean> {
+  if (request.method !== 'POST') return false;
+  try {
+    const brut = await request.clone().text();
+    if (!brut) return false;
+    return (JSON.parse(brut) as { action?: string }).action === 'dashboard';
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
@@ -55,6 +72,32 @@ Deno.serve(async (request) => {
     if (!userId) return json({ error: 'Connexion requise.' }, 401);
 
     const db = serviceClient();
+
+    // Le tableau de bord du vendeur : ses versements, son IBAN, ses documents.
+    // Demandé explicitement plutôt que rendu à chaque lecture d'état — un lien
+    // de connexion ne sert qu'une fois et expire en quelques minutes, en
+    // fabriquer un à chaque affichage de l'écran serait du gaspillage et une
+    // rangée de liens morts dans les journaux de Stripe.
+    if (await veutLeTableauDeBord(request)) {
+      const { data: compte } = await db
+        .from('seller_accounts')
+        .select('stripe_account_id, payouts_enabled')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!compte?.stripe_account_id) {
+        return json({ error: 'Vous n’avez pas encore de compte de paiement.' }, 409);
+      }
+      if (!compte.payouts_enabled) {
+        return json({ error: 'Terminez d’abord la vérification de votre identité.' }, 409);
+      }
+
+      const lien = await stripeRequest<{ url: string }>(
+        'POST',
+        `/accounts/${compte.stripe_account_id}/login_links`,
+      );
+      return json({ url: lien.url });
+    }
     const { data: existing } = await db
       .from('seller_accounts')
       .select('stripe_account_id')

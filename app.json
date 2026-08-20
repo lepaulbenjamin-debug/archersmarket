@@ -14,7 +14,7 @@
       "backgroundColor": "#000000"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "app.archersmarket.ios",
       "buildNumber": "1",
       "infoPlist": {

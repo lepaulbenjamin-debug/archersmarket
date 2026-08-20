@@ -102,6 +102,7 @@ export async function createListing(
       city: fields.city,
       shipping: fields.shipping,
       shipping_price: fields.shippingPrice ?? null,
+      parcel_size: fields.parcelSize ?? null,
     })
     .select(LISTING_SELECT)
     .single();

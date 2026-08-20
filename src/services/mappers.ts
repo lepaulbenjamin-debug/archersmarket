@@ -3,6 +3,7 @@ import type { Conversation, Listing, Message, Review, User } from '@/types';
 
 /** Lignes telles que renvoyées par PostgREST (snake_case). */
 export interface ProfileRow {
+  is_moderator?: boolean | null;
   id: string;
   handle: string;
   name: string;
@@ -37,6 +38,8 @@ export interface ListingRow {
   city: string;
   shipping: boolean;
   shipping_price: number | string | null;
+  parcel_size: 'small' | 'medium' | 'long' | 'xl' | null;
+  favorites_count: number | null;
   status: Listing['status'];
   views: number;
   created_at: string;
@@ -67,6 +70,8 @@ export interface MessageRow {
   sender_id: string;
   body: string;
   offer: number | string | null;
+  risk_weight: number | null;
+  risk_reason: string | null;
   created_at: string;
 }
 
@@ -91,6 +96,7 @@ export function toUser(row: ProfileRow, email?: string): User {
     discipline: row.discipline ?? undefined,
     avatarColor: row.avatar_color,
     acceptsPayments: !!row.accepts_payments,
+    isModerator: !!row.is_moderator,
     rating: num(row.rating) ?? 0,
     reviewCount: row.review_count,
     memberSince: row.created_at,
@@ -123,11 +129,13 @@ export function toListing(row: ListingRow): Listing {
     city: row.city,
     shipping: row.shipping,
     shippingPrice: num(row.shipping_price),
+    parcelSize: row.parcel_size ?? undefined,
     // Sans photo, l'app retombe sur le visuel de la catégorie.
     images: photos.length ? photos : [row.category],
     status: row.status,
     createdAt: row.created_at,
     views: row.views,
+    favoritesCount: row.favorites_count ?? 0,
   };
 }
 
@@ -149,6 +157,8 @@ export function toMessage(row: MessageRow): Message {
     senderId: row.sender_id,
     text: row.body,
     offer: num(row.offer),
+    riskWeight: row.risk_weight ?? 0,
+    riskReason: row.risk_reason ?? undefined,
     createdAt: row.created_at,
   };
 }

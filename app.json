@@ -14,12 +14,13 @@
       "backgroundColor": "#000000"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "app.archersmarket.ios",
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "app.archersmarket.android",
@@ -60,10 +61,11 @@
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.app.archersmarket.ios",
           "enableGooglePay": false
         }
-      ]
+      ],
+      "expo-web-browser",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": false
@@ -74,6 +76,12 @@
         "projectId": "656990c6-e07c-4947-a61a-e2f4bcb5a08c"
       }
     },
-    "owner": "creaweb-conseil"
+    "owner": "creaweb-conseil",
+    "updates": {
+      "url": "https://u.expo.dev/656990c6-e07c-4947-a61a-e2f4bcb5a08c"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    }
   }
 }

@@ -49,6 +49,10 @@ fiches stores existantes :
 
 L'ancienne version publiée est la 1.1.3 ; `app.json` est donc en 2.0.0.
 
+Les builds partent normalement par `eas build`. Quand le forfait mensuel est
+épuisé, la compilation se fait sur un Mac sans rien changer d'autre —
+voir [BUILD.md](BUILD.md).
+
 ## Base de données (Supabase)
 
 Les clés client vivent dans `.env` (`EXPO_PUBLIC_SUPABASE_URL` et `EXPO_PUBLIC_SUPABASE_KEY`) ;

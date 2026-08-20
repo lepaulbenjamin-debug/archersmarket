@@ -23,7 +23,7 @@
 
       <div class="encart">
         <p>
-          <a id="retour" href="archersmarket://compte/paiement"><strong>Rouvrir Archers Market</strong></a>
+          <a id="retour" href="archersmarket://account/payment"><strong>Rouvrir Archers Market</strong></a>
         </p>
         <p>
           Si rien ne se passe, fermez cet onglet et rouvrez l’application à la main : votre
@@ -43,7 +43,7 @@
         // Cette page n'existe que pour rebondir : Stripe refuse un schéma
         // d'application comme adresse de retour, seul https est accepté.
         setTimeout(function () {
-          window.location.href = 'archersmarket://compte/paiement';
+          window.location.href = 'archersmarket://account/payment';
         }, 400);
       </script>
     </main>

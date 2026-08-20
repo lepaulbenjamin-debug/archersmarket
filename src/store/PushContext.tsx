@@ -39,18 +39,23 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [user]);
 
-  // Toucher une notification ouvre la conversation concernée.
+  // Toucher une notification ouvre ce qu'elle annonce. Sans cela, une alerte
+  // sur recherche déposerait le membre sur l'accueil, à lui de retrouver
+  // l'annonce — autant ne pas l'avoir prévenu.
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as {
         type?: string;
         conversationId?: string;
         profileId?: string;
+        listingId?: string;
       };
       if (data?.type === 'message' && data.conversationId) {
         router.push(`/chat/${data.conversationId}`);
       } else if (data?.type === 'review' && data.profileId) {
         router.push(`/seller/${data.profileId}`);
+      } else if (data?.type === 'saved_search' && data.listingId) {
+        router.push(`/listing/${data.listingId}`);
       }
     });
     return () => subscription.remove();

@@ -2,6 +2,11 @@
 
 export type CategoryId =
   | 'bow-recurve'
+  | 'riser'
+  | 'limbs'
+  | 'rest'
+  | 'arrow-parts'
+  | 'tools'
   | 'bow-compound'
   | 'bow-longbow'
   | 'arrows'
@@ -36,6 +41,8 @@ export interface User {
   memberSince: string;
   /** Ce membre a passé la vérification Stripe et peut encaisser. */
   acceptsPayments: boolean;
+  /** Accès à la file de modération. Se pose à la main, jamais depuis l'app. */
+  isModerator?: boolean;
 }
 
 export interface Listing {
@@ -64,15 +71,26 @@ export interface Listing {
   city: string;
   shipping: boolean;
   shippingPrice?: number;
+  /** Format d'expédition annoncé par le vendeur, pour coter le transport. */
+  parcelSize?: 'small' | 'medium' | 'long' | 'xl';
   /** URL publique des photos, ou clé de visuel de catégorie si l'annonce n'en a pas. */
   images: string[];
   status: ListingStatus;
   createdAt: string;
   views: number;
+  /** Combien de membres l'ont mise en favori. Tenu en base, jamais par l'app. */
+  favoritesCount: number;
 }
 
 export interface Message {
   id: string;
+  /**
+   * Poids du soupçon de contournement du paiement sécurisé, 0 quand rien n'a
+   * été relevé. Calculé en base à l'insertion : l'app ne peut ni le produire
+   * ni l'effacer.
+   */
+  riskWeight?: number;
+  riskReason?: string;
   conversationId: string;
   senderId: string;
   text: string;
@@ -161,6 +179,8 @@ export interface NewListingInput {
   city: string;
   shipping: boolean;
   shippingPrice?: number;
+  /** Format d'expédition, qui décide des transporteurs proposés à l'acheteur. */
+  parcelSize?: 'small' | 'medium' | 'long' | 'xl';
   /** URI locales des photos choisies dans la galerie. */
   photos?: string[];
 }

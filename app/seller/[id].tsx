@@ -7,6 +7,7 @@ import { Avatar } from '@/components/Avatar';
 import { EmptyState } from '@/components/EmptyState';
 import { ListingGrid } from '@/components/ListingGrid';
 import { Rating } from '@/components/Rating';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { MemberMenu } from '@/components/MemberMenu';
 import { ReviewList } from '@/components/ReviewList';
 import { Header, Screen } from '@/components/Screen';
@@ -69,6 +70,7 @@ export default function SellerScreen() {
                 <Text style={styles.name}>{seller.name}</Text>
                 <Text style={styles.handle}>@{seller.handle}</Text>
                 <Rating value={seller.rating} count={seller.reviewCount} />
+              {seller.acceptsPayments ? <VerifiedBadge /> : null}
               </View>
             </View>
             {seller.bio ? <Text style={styles.bio}>{seller.bio}</Text> : null}

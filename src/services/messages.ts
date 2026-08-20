@@ -33,7 +33,7 @@ export async function fetchThreads(userId: string): Promise<Threads> {
     supabase.from('conversation_reads').select('conversation_id, read_at').eq('user_id', userId),
     supabase
       .from('messages')
-      .select('id, conversation_id, sender_id, body, offer, created_at')
+      .select('id, conversation_id, sender_id, body, offer, risk_weight, risk_reason, created_at')
       .in('conversation_id', ids)
       .order('created_at', { ascending: true }),
   ]);
@@ -90,7 +90,7 @@ export async function sendMessage(
       body: text.trim(),
       offer: offer ?? null,
     })
-    .select('id, conversation_id, sender_id, body, offer, created_at')
+    .select('id, conversation_id, sender_id, body, offer, risk_weight, risk_reason, created_at')
     .single();
   if (error || !data) fail(error, 'Envoi du message impossible.');
   return toMessage(data as MessageRow);

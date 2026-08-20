@@ -15,16 +15,21 @@ export interface Category {
 }
 
 export const categories: Category[] = [
-  { id: 'bow-recurve', label: 'Arc classique', short: 'Classique', icon: 'bow-arrow', specs: ['drawWeight', 'bowLength'] },
+  { id: 'bow-recurve', label: 'Arc classique complet', short: 'Classique', icon: 'bow-arrow', specs: ['drawWeight', 'bowLength'] },
+  { id: 'riser', label: 'Poignées', short: 'Poignées', icon: 'gesture-tap-hold', specs: ['bowLength'] },
+  { id: 'limbs', label: 'Branches', short: 'Branches', icon: 'chart-bell-curve', specs: ['drawWeight', 'bowLength'] },
   { id: 'bow-compound', label: 'Arc à poulies', short: 'Poulies', icon: 'cog-outline', specs: ['drawWeight', 'drawLength'] },
   { id: 'bow-longbow', label: 'Arc traditionnel / longbow', short: 'Trad', icon: 'pine-tree', specs: ['drawWeight', 'bowLength'] },
   { id: 'arrows', label: 'Flèches & tubes', short: 'Flèches', icon: 'arrow-top-right', specs: ['spine'] },
+  { id: 'arrow-parts', label: 'Pointes, plumes & encoches', short: 'Composants', icon: 'puzzle-outline', specs: ['spine'] },
   { id: 'sight', label: 'Viseurs & scopes', short: 'Viseurs', icon: 'target-variant', specs: [] },
+  { id: 'rest', label: 'Repose-flèches & berger', short: 'Repose-flèche', icon: 'call-split', specs: [] },
   { id: 'stabilizer', label: 'Stabilisation', short: 'Stab', icon: 'ray-start-arrow', specs: ['size'] },
   { id: 'release', label: 'Décocheurs & palettes', short: 'Décocheur', icon: 'hand-back-right-outline', specs: ['size'] },
   { id: 'quiver', label: 'Carquois', short: 'Carquois', icon: 'bag-personal-outline', specs: [] },
   { id: 'protection', label: 'Protections', short: 'Protection', icon: 'shield-outline', specs: ['size'] },
   { id: 'string', label: 'Cordes & accessoires', short: 'Cordes', icon: 'vector-polyline', specs: ['bowLength'] },
+  { id: 'tools', label: 'Outils & réglage', short: 'Outils', icon: 'wrench-outline', specs: [] },
   { id: 'target', label: 'Cibles & blasons', short: 'Cibles', icon: 'bullseye-arrow', specs: ['size'] },
   { id: 'apparel', label: 'Textile & bagagerie', short: 'Textile', icon: 'tshirt-crew-outline', specs: ['size'] },
 ];
@@ -49,33 +54,33 @@ export const conditions: Condition[] = [
 export const conditionById = (id: ConditionId): Condition =>
   conditions.find((c) => c.id === id) ?? conditions[2];
 
+/**
+ * Marques présentes sur le marché français de l'occasion, regroupées par
+ * famille pour que la recherche reste lisible. « Autre » ferme la marche :
+ * un vendeur ne doit jamais être bloqué par une liste.
+ */
 export const brands = [
-  'Hoyt',
-  'Win&Win',
-  'MK Korea',
-  'Uukha',
-  'Border',
-  'Gillo',
-  'Spigarelli',
-  'Fivics',
-  'Samick',
-  'Kinetic',
-  'Mathews',
-  'PSE',
-  'Elite',
-  'Bear Archery',
-  'Easton',
-  'Skylon',
-  'Victory',
-  'Beiter',
-  'Shibuya',
-  'Axcel',
-  'Arc Systeme',
-  'Cartel',
-  'Decut',
-  'Avalon',
-  'Legend',
-  'Bohning',
+  // Arc classique — poignées et branches
+  'Hoyt', 'Win&Win', 'WNS', 'MK Korea', 'Uukha', 'Border', 'Gillo', 'Spigarelli',
+  'Fivics', 'Samick', 'SF Archery', 'Core Archery', 'Kinetic', 'Sanlida', 'Galaxy',
+  'KAP', 'Best Archery', 'Krossen', 'Stellar',
+  // Arc à poulies
+  'Mathews', 'PSE', 'Elite', 'Bowtech', 'Prime', 'Hoyt Compound', 'Diamond', 'Martin', 'Mybo',
+  // Traditionnel
+  'Bear Archery', 'Ragim', 'Bearpaw', 'Buck Trail', 'Big Tradition', 'White Feather',
+  // Flèches, tubes et composants
+  'Easton', 'Skylon', 'Victory', 'Carbon Express', 'Gold Tip', 'Black Eagle',
+  'Cross-X', 'Nijora', 'Penthalon', 'Aurel', 'Bohning', 'Beiter',
+  // Viseurs et scopes
+  'Shibuya', 'Axcel', 'Sure-Loc', 'CBE', 'HHA', 'Spot Hogg', 'Titan',
+  // Stabilisation
+  'Arc Systeme', 'Doinker', 'Bee Stinger', 'Fuse',
+  // Décocheurs et repose-flèches
+  'Carter', 'Scott', 'TruBall', 'AAE', 'Hamskea', 'QAD',
+  // Cordes
+  'BCY', 'Angel', 'Brownell', 'Flex Archery',
+  // Accessoires, protections, cibles
+  'Cartel', 'Decut', 'Avalon', 'Legend', 'Neet', 'JVD', 'Yate', 'Eleven', 'Egertec', 'Rinehart',
   'Autre',
 ];
 
@@ -98,6 +103,11 @@ export const sortOptions: Array<{ id: SortOption; label: string }> = [
 /** Visuels locaux : l'app reste illustrée même sans réseau. */
 export const categoryImages: Record<CategoryId, number> = {
   'bow-recurve': require('../../assets/listings/bow-recurve.png'),
+  riser: require('../../assets/listings/riser.png'),
+  limbs: require('../../assets/listings/limbs.png'),
+  rest: require('../../assets/listings/rest.png'),
+  'arrow-parts': require('../../assets/listings/arrow-parts.png'),
+  tools: require('../../assets/listings/tools.png'),
   'bow-compound': require('../../assets/listings/bow-compound.png'),
   'bow-longbow': require('../../assets/listings/bow-longbow.png'),
   arrows: require('../../assets/listings/arrows.png'),

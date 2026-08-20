@@ -21,7 +21,10 @@ import { ListingCard } from '@/components/ListingCard';
 import { Rating } from '@/components/Rating';
 import { ReportSheet } from '@/components/ReportSheet';
 import { Screen } from '@/components/Screen';
+import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { categoryById, conditionById, handednessLabel } from '@/data/catalog';
+import { parcelLabel } from '@/services/shipping';
+import { tripsFromArea } from '@/services/trips';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
@@ -39,6 +42,7 @@ export default function ListingScreen() {
   const { openConversation } = useMessages();
   const [imageIndex, setImageIndex] = useState(0);
   const [reporting, setReporting] = useState(false);
+  const [convoyeurs, setConvoyeurs] = useState(0);
   const viewed = useRef(false);
 
   const listing = id ? listingById(id) : undefined;
@@ -50,6 +54,23 @@ export default function ListingScreen() {
       registerView(listing.id);
     }
   }, [listing, registerView]);
+
+  // Le convoyage n'apparaissait qu'au paiement, après la saisie d'une adresse
+  // complète : personne ne pouvait deviner qu'il existait. Ce compteur le dit
+  // dès la fiche, sans rien demander.
+  useEffect(() => {
+    if (!id || !user) {
+      setConvoyeurs(0);
+      return;
+    }
+    let vivant = true;
+    tripsFromArea(id).then((n) => {
+      if (vivant) setConvoyeurs(n);
+    });
+    return () => {
+      vivant = false;
+    };
+  }, [id, user]);
 
   const similar = useMemo(
     () =>
@@ -81,9 +102,11 @@ export default function ListingScreen() {
   const condition = conditionById(listing.condition);
   const discount = discountPercent(listing.price, listing.originalPrice);
   const isOwner = user?.id === listing.sellerId;
-  // Le paiement protégé n'apparaît que si le vendeur est en règle chez Stripe
-  // et si l'annonce voyage : une remise en main propre n'a rien à séquestrer.
-  const sellerPays = !!seller?.acceptsPayments && listing.shipping;
+  // L'achat est toujours proposé : à défaut de paiement séquestré, la remise
+  // vérifiée fonctionne avec n'importe quel vendeur, sans qu'il ait eu à
+  // passer la vérification d'identité. C'était la barrière qui empêchait la
+  // plupart des ventes locales.
+  const sellerPays = !isOwner && listing.status === 'active';
   const images = listing.images.length ? listing.images : [listing.category];
 
   const specs: Array<[string, string]> = [
@@ -97,14 +120,15 @@ export default function ListingScreen() {
   if (listing.drawLength) specs.push(['Allonge', `${listing.drawLength}"`]);
   if (listing.spine) specs.push(['Spine', `${listing.spine}`]);
   if (listing.size) specs.push(['Taille', listing.size]);
+  // Le port n'est plus un forfait annoncé par le vendeur : il est coté par
+  // les transporteurs au moment de l'achat, pour l'adresse de l'acheteur.
   specs.push([
     'Livraison',
-    listing.shipping
-      ? listing.shippingPrice
-        ? `Envoi ${formatPrice(listing.shippingPrice)}`
-        : 'Envoi possible, frais à convenir'
-      : 'Remise en main propre',
+    listing.shipping ? 'Envoi possible, tarif calculé à l’achat' : 'Remise en main propre',
   ]);
+  if (listing.shipping && listing.parcelSize) {
+    specs.push(['Format du colis', parcelLabel(listing.parcelSize)]);
+  }
 
   const contactSeller = async () => {
     if (!user) {
@@ -218,6 +242,14 @@ export default function ListingScreen() {
             <MetaItem icon="map-marker-outline" label={listing.city} />
             <MetaItem icon="clock-outline" label={formatRelativeDate(listing.createdAt)} />
             <MetaItem icon="eye-outline" label={`${listing.views} vues`} />
+            {/* En dessous de deux, le compte n'apprend rien : l'acheteur qui
+                vient de cliquer sur le cœur se compterait lui-même. */}
+            {listing.favoritesCount >= 2 ? (
+              <MetaItem
+                icon="heart-outline"
+                label={`${listing.favoritesCount} favoris`}
+              />
+            ) : null}
           </View>
 
           <Text style={styles.sectionTitle}>Description</Text>
@@ -233,6 +265,27 @@ export default function ListingScreen() {
             ))}
           </View>
 
+          {/* Ni promesse ni engagement : on ne sait pas encore où va
+              l'acheteur, seulement qu'il y a du mouvement au départ. La
+              seconde phrase existe pour que la première ne soit pas lue
+              comme « quelqu'un va chez vous ». */}
+          {convoyeurs > 0 && !isOwner ? (
+            <View style={styles.convoyage}>
+              <MaterialCommunityIcons name="car-outline" size={20} color={colors.primary} />
+              <View style={styles.flex}>
+                <Text style={styles.convoyageTitre}>
+                  {convoyeurs === 1
+                    ? 'Un archer part de ce secteur ce mois-ci'
+                    : `${convoyeurs} archers partent de ce secteur ce mois-ci`}
+                </Text>
+                <Text style={styles.convoyageTexte}>
+                  Ils peuvent porter l’arc dans leur coffre pour quelques euros. Indiquez votre
+                  adresse au moment de l’achat pour voir si l’un d’eux passe chez vous.
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
           {seller ? (
             <>
               <Text style={styles.sectionTitle}>Vendeur</Text>
@@ -246,6 +299,7 @@ export default function ListingScreen() {
                   <Text style={styles.sellerName}>{seller.name}</Text>
                   <Rating value={seller.rating} count={seller.reviewCount} size={13} />
                   {seller.club ? <Text style={styles.sellerClub}>{seller.club}</Text> : null}
+                  {seller.acceptsPayments ? <VerifiedBadge compact /> : null}
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textFaint} />
               </Pressable>
@@ -438,6 +492,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.lg,
   },
+  flex: { flex: 1 },
+  convoyage: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+  },
+  convoyageTitre: { fontSize: 14, fontWeight: '700', color: colors.text },
+  convoyageTexte: { fontSize: 12.5, color: colors.textMuted, lineHeight: 18, marginTop: 3 },
   specRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

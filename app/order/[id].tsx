@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -8,7 +9,9 @@ import { Field } from '@/components/Field';
 import { PaymentBadge } from '@/components/PaymentBadge';
 import { Header, Screen } from '@/components/Screen';
 import {
+  confirmHandover,
   confirmReceived,
+  fetchHandoverCode,
   fetchOrder,
   formatCents,
   markShipped,
@@ -16,6 +19,11 @@ import {
   statusLabel,
   type Order,
 } from '@/services/payments';
+import {
+  createLabel, fetchRelayPoints, fetchShipment,
+  type PackagingChoice, type RelayPoint, type Shipment,
+} from '@/services/shipping';
+import { fetchPickupCode } from '@/services/trips';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 
@@ -35,14 +43,50 @@ export default function OrderScreen() {
   const { user } = useAuth();
 
   const [order, setOrder] = useState<Order | null>(null);
+  const [shipment, setShipment] = useState<Shipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [labelling, setLabelling] = useState(false);
+  // Certains transporteurs veulent savoir où le vendeur déposera le colis.
+  // On ne le demande qu'à ce moment-là : l'acheteur ne peut pas le choisir,
+  // il ne sait pas d'où part le paquet.
+  const [dropoffs, setDropoffs] = useState<RelayPoint[] | null>(null);
+  const [emballages, setEmballages] = useState<PackagingChoice[] | null>(null);
+  // Les réponses déjà données. Un transporteur peut réclamer les deux, et il
+  // serait pénible de redemander la première après avoir posé la seconde.
+  const repondu = useRef<{ depot?: { code: string; label: string }; emballage?: string }>({});
+  // Le code de remise : l'acheteur le lit, le vendeur le saisit. Jamais
+  // l'inverse — sinon le vendeur pourrait solder la vente sans avoir sorti
+  // l'arc du coffre.
+  const [handoverCode, setHandoverCode] = useState<string | null>(null);
+  // En convoyage, chacun tient un code : le vendeur celui du départ,
+  // l'acheteur celui de l'arrivée. Le convoyeur les saisit, ne les lit jamais.
+  const [pickupCode, setPickupCode] = useState<string | null>(null);
+  const [codeSaisi, setCodeSaisi] = useState('');
   const [carrier, setCarrier] = useState('');
   const [tracking, setTracking] = useState('');
 
   const load = useCallback(async () => {
     try {
-      setOrder(await fetchOrder(id));
+      const [commande, expedition] = await Promise.all([fetchOrder(id), fetchShipment(id)]);
+      setOrder(commande);
+      setShipment(expedition);
+      if (commande?.paymentMode === 'direct' && commande.status === 'paid') {
+        // Échoue silencieusement côté vendeur : c'est voulu, le code ne lui
+        // est pas destiné.
+        setHandoverCode(await fetchHandoverCode(commande.id).catch(() => null));
+      }
+      if (commande?.shippingMode === 'archer'
+          && (commande.status === 'paid' || commande.status === 'shipped')) {
+        // Chacun demande le sien ; l'autre appel échoue, et c'est la preuve
+        // que la chaîne de garde tient.
+        const [remise, depart] = await Promise.all([
+          fetchHandoverCode(commande.id).catch(() => null),
+          fetchPickupCode(commande.id).catch(() => null),
+        ]);
+        setHandoverCode(remise);
+        setPickupCode(depart);
+      }
     } catch (error) {
       Alert.alert('Commande indisponible', (error as Error).message);
     } finally {
@@ -84,6 +128,72 @@ export default function OrderScreen() {
       Alert.alert(echec, (error as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  // L'étiquette est payée par la plateforme avec le port déjà encaissé : le
+  // vendeur n'a rien à avancer. Deux appuis ne l'achètent pas deux fois — la
+  // fonction Edge rend la même expédition.
+  const editerEtiquette = async (depot?: RelayPoint, emballage?: string) => {
+    if (depot) {
+      repondu.current.depot = {
+        code: depot.code,
+        label: `${depot.name}, ${depot.address} ${depot.zip} ${depot.city}`,
+      };
+    }
+    if (emballage) repondu.current.emballage = emballage;
+
+    setLabelling(true);
+    try {
+      const { labelUrl } = await createLabel(
+        order.id,
+        repondu.current.depot,
+        repondu.current.emballage,
+      );
+      setDropoffs(null);
+      setEmballages(null);
+      await load();
+      if (labelUrl) await WebBrowser.openBrowserAsync(labelUrl);
+    } catch (error) {
+      const details = error as Error & {
+        needsDropoff?: boolean;
+        needsPackaging?: boolean;
+        choices?: PackagingChoice[];
+        operator?: string;
+        service?: string;
+        from?: { zip: string; city: string; country: string };
+      };
+      if (details.needsPackaging && details.choices) {
+        setEmballages(details.choices);
+      } else if (details.needsDropoff && details.from && details.operator && details.service) {
+        try {
+          setDropoffs(
+            await fetchRelayPoints(
+              { operatorCode: details.operator, serviceCode: details.service },
+              details.from,
+              'dropoff',
+            ),
+          );
+        } catch (autre) {
+          Alert.alert('Points de dépôt indisponibles', (autre as Error).message);
+        }
+      } else {
+        Alert.alert('Étiquette indisponible', details.message);
+      }
+    } finally {
+      setLabelling(false);
+    }
+  };
+
+  const ouvrirEtiquette = async () => {
+    setLabelling(true);
+    try {
+      const { labelUrl } = await createLabel(order.id);
+      if (labelUrl) await WebBrowser.openBrowserAsync(labelUrl);
+    } catch (error) {
+      Alert.alert('Étiquette indisponible', (error as Error).message);
+    } finally {
+      setLabelling(false);
     }
   };
 
@@ -176,14 +286,54 @@ export default function OrderScreen() {
             <Ligne label="Protection acheteur" value={formatCents(order.protectionAmount)} />
           ) : null}
           <View style={styles.separateur} />
+          {order.paymentMode === 'direct' ? (
+            <Text style={styles.aide}>
+              Le prix de l’arc se règle sur place. Nous n’encaissons que la mise en relation.
+            </Text>
+          ) : null}
           <Ligne
-            label={side === 'buyer' ? 'Total payé' : 'Vous recevez'}
+            label={
+              order.paymentMode === 'direct'
+                ? 'Réglé à Archers Market'
+                : side === 'buyer'
+                  ? 'Total payé'
+                  : 'Vous recevez'
+            }
             value={formatCents(
-              side === 'buyer' ? order.totalAmount : order.itemAmount + order.shippingAmount,
+              order.paymentMode === 'direct'
+                ? order.totalAmount
+                : side === 'buyer'
+                ? order.totalAmount
+                : // Le port ne revient au vendeur que s'il expédie par ses
+                  // propres moyens : quand la plateforme achète l'étiquette,
+                  // elle a déjà payé le transporteur avec cet argent. En
+                  // convoyage il ne lui revient pas davantage — c'est l'archer
+                  // qui a fait la route qui le touche.
+                  order.itemAmount
+                    + (shipment
+                      ? 0
+                      : order.shippingAmount - (order.carrierAmount ?? 0)),
             )}
             fort
           />
+          {side === 'seller' && shipment ? (
+            <Text style={styles.aide}>
+              Les frais de port ont servi à payer votre étiquette.
+            </Text>
+          ) : null}
+          {side === 'seller' && order.shippingMode === 'archer' ? (
+            <Text style={styles.aide}>
+              La participation aux frais revient au convoyeur, après la livraison.
+            </Text>
+          ) : null}
         </View>
+
+        {order.relayLabel ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Point relais</Text>
+            <Text style={styles.suivi}>{order.relayLabel}</Text>
+          </View>
+        ) : null}
 
         {order.trackingNumber ? (
           <View style={styles.card}>
@@ -195,33 +345,211 @@ export default function OrderScreen() {
           </View>
         ) : null}
 
-        {/* Actions du vendeur */}
-        {side === 'seller' && order.status === 'paid' ? (
+        {/* Convoyage entre archers : deux codes, un à chaque bout */}
+        {order.shippingMode === 'archer'
+          && (order.status === 'paid' || order.status === 'shipped') ? (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Déclarer l’envoi</Text>
-            <Text style={styles.aide}>
-              Le numéro de suivi n’est pas obligatoire, mais c’est lui qui vous protège en cas de
-              contestation.
-            </Text>
-            <Field
-              label="Transporteur"
-              placeholder="ex. Mondial Relay"
-              value={carrier}
-              onChangeText={setCarrier}
-            />
-            <Field
-              label="Numéro de suivi"
-              placeholder="ex. 6A12345678"
-              value={tracking}
-              onChangeText={setTracking}
-              autoCapitalize="characters"
-            />
-            <Button label="J’ai expédié" icon="truck-fast-outline" onPress={declarerEnvoi} loading={busy} />
+            <Text style={styles.cardTitle}>Convoyage entre archers</Text>
+            {side === 'seller' ? (
+              <>
+                <Text style={styles.aide}>
+                  {order.status === 'paid'
+                    ? 'Donnez ce code au convoyeur au moment où vous lui remettez le colis, pas avant : c’est ce qui prouve que le départ a eu lieu.'
+                    : 'Le colis est parti. Le convoyeur en répond jusqu’à la livraison.'}
+                </Text>
+                {order.status === 'paid' ? (
+                  <Text style={styles.code}>{pickupCode ?? '••••'}</Text>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <Text style={styles.aide}>
+                  {order.status === 'paid'
+                    ? 'Le convoyeur récupère l’arc chez le vendeur, puis vous l’apporte. Vous lui donnerez ce code à ce moment-là, une fois l’arc entre vos mains.'
+                    : 'L’arc est entre les mains du convoyeur. Donnez-lui ce code quand il vous le remettra, et pas avant.'}
+                </Text>
+                <Text style={styles.code}>{handoverCode ?? '••••'}</Text>
+                <Text style={styles.aide}>
+                  Si l’arc n’arrive pas ou arrive cassé, vous êtes remboursé : c’est nous qui en
+                  répondons, pas le convoyeur.
+                </Text>
+              </>
+            )}
           </View>
         ) : null}
 
+        {/* Remise en main propre : le code fait foi */}
+        {order.paymentMode === 'direct' && order.status === 'paid' ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Remise en main propre</Text>
+            {side === 'buyer' ? (
+              <>
+                <Text style={styles.aide}>
+                  Essayez l’arc, puis réglez le vendeur directement. Ne donnez ce code qu’une
+                  fois l’arc entre vos mains : c’est lui qui clôt la vente.
+                </Text>
+                <Text style={styles.code}>{handoverCode ?? '••••'}</Text>
+                <Text style={styles.aide}>
+                  Nous n’avons pas encaissé le prix de l’arc et ne pourrons donc rien vous
+                  rembourser. En cas de problème, signalez-le-nous depuis la conversation.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.aide}>
+                  L’acheteur vous donnera un code à quatre chiffres une fois l’arc essayé et
+                  réglé. Saisissez-le pour clore la vente.
+                </Text>
+                <Field
+                  label="Code de remise"
+                  placeholder="1234"
+                  value={codeSaisi}
+                  onChangeText={setCodeSaisi}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+                <Button
+                  label="Confirmer la remise"
+                  icon="handshake-outline"
+                  onPress={() =>
+                    run(() => confirmHandover(order.id, codeSaisi), 'Confirmation impossible')
+                  }
+                  loading={busy}
+                  disabled={codeSaisi.trim().length < 4}
+                />
+              </>
+            )}
+          </View>
+        ) : null}
+
+        {/* Actions du vendeur */}
+        {side === 'seller' && order.paymentMode === 'escrow' && order.status === 'paid' ? (
+          // Un convoyage n'a pas d'étiquette à imprimer : le colis change de
+          // mains, et ce sont les deux codes qui en tiennent lieu.
+          order.shippingMode !== 'hand' && order.shippingMode !== 'archer' ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Expédier</Text>
+              {shipment ? (
+                <>
+                  <Text style={styles.aide}>
+                    {shipment.operatorLabel} · {shipment.serviceLabel}
+                    {shipment.trackingNumber ? `\nSuivi ${shipment.trackingNumber}` : ''}
+                  </Text>
+                  <Button
+                    label="Revoir l’étiquette"
+                    variant="secondary"
+                    icon="file-pdf-box"
+                    onPress={ouvrirEtiquette}
+                    loading={labelling}
+                  />
+                  <Button
+                    label="J’ai déposé le colis"
+                    icon="truck-fast-outline"
+                    onPress={() => run(() => markShipped(order.id), 'Déclaration impossible')}
+                    loading={busy}
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.aide}>
+                    L’étiquette est déjà payée par les frais de port. Imprimez-la, collez-la sur le
+                    colis, et déposez-le.
+                  </Text>
+                  {emballages ? (
+                    <>
+                      <Text style={styles.cardTitle}>Comment est emballé le colis ?</Text>
+                      <Text style={styles.aide}>
+                        L’envoi est assuré à hauteur du prix de l’arc. L’assureur demande de quoi
+                        il s’agit : répondez juste, c’est ce qui vaudra en cas de casse.
+                      </Text>
+                      {emballages.map((choix) => (
+                        <Pressable
+                          key={choix.code}
+                          accessibilityRole="button"
+                          onPress={() => editerEtiquette(undefined, choix.code)}
+                          style={({ pressed }) => [styles.depot, pressed && styles.pressed]}
+                        >
+                          <MaterialCommunityIcons
+                            name="package-variant-closed"
+                            size={18}
+                            color={colors.primary}
+                          />
+                          <View style={styles.flex}>
+                            <Text style={styles.depotName}>{choix.label}</Text>
+                            <Text style={styles.depotAddress}>{choix.detail}</Text>
+                          </View>
+                        </Pressable>
+                      ))}
+                    </>
+                  ) : dropoffs ? (
+                    <>
+                      <Text style={styles.cardTitle}>Où déposerez-vous le colis ?</Text>
+                      {dropoffs.slice(0, 12).map((point) => (
+                        <Pressable
+                          key={point.code}
+                          accessibilityRole="button"
+                          onPress={() => editerEtiquette(point)}
+                          style={({ pressed }) => [styles.depot, pressed && styles.pressed]}
+                        >
+                          <MaterialCommunityIcons
+                            name="storefront-outline"
+                            size={18}
+                            color={colors.primary}
+                          />
+                          <View style={styles.flex}>
+                            <Text style={styles.depotName}>{point.name}</Text>
+                            <Text style={styles.depotAddress}>
+                              {point.address}, {point.zip} {point.city}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      ))}
+                    </>
+                  ) : (
+                    <Button
+                      label="Éditer l’étiquette"
+                      icon="printer-outline"
+                      onPress={() => editerEtiquette()}
+                      loading={labelling}
+                    />
+                  )}
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push('/account/address')}
+                    hitSlop={6}
+                  >
+                    <Text style={styles.lien}>Modifier mon adresse d’expédition</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          ) : (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Déclarer la remise</Text>
+              <Text style={styles.aide}>
+                Cette vente se fait en main propre. Confirmez une fois le matériel remis.
+              </Text>
+              <Field
+                label="Transporteur"
+                placeholder="ex. Mondial Relay"
+                value={carrier}
+                onChangeText={setCarrier}
+              />
+              <Field
+                label="Numéro de suivi"
+                placeholder="ex. 6A12345678"
+                value={tracking}
+                onChangeText={setTracking}
+                autoCapitalize="characters"
+              />
+              <Button label="C’est remis" icon="handshake-outline" onPress={declarerEnvoi} loading={busy} />
+            </View>
+          )
+        ) : null}
+
         {/* Actions de l'acheteur */}
-        {side === 'buyer' && (order.status === 'paid' || order.status === 'shipped') ? (
+        {side === 'buyer' && order.paymentMode === 'escrow'
+          && (order.status === 'paid' || order.status === 'shipped') ? (
           <>
             <Button
               label="J’ai bien reçu l’article"
@@ -277,6 +605,20 @@ function Ligne({ label, value, fort }: { label: string; value: string; fort?: bo
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  pressed: { opacity: 0.85 },
+  depot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 11,
+  },
+  depotName: { fontSize: 14, fontWeight: '700', color: colors.text },
+  depotAddress: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   loader: { marginTop: spacing.xxl },
   absent: { textAlign: 'center', color: colors.textMuted, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
@@ -312,6 +654,14 @@ const styles = StyleSheet.create({
   ligneFort: { fontSize: 15.5, fontWeight: '800', color: colors.text },
   separateur: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
   suivi: { fontSize: 14, color: colors.text, fontWeight: '600' },
+  code: {
+    fontSize: 40,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: 10,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
   probleme: { fontSize: 13, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.xs },
   litige: {
     flexDirection: 'row',

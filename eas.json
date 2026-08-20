@@ -9,7 +9,8 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://uhflzqexpiyvtcyctqhn.supabase.co"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
@@ -18,13 +19,15 @@
       },
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "ios": {
         "resourceClass": "m-medium"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {
@@ -33,9 +36,9 @@
         "appleId": "lepaul.benjamin@gmail.com",
         "ascAppId": "6448762227",
         "appleTeamId": "Y7265GT5W3",
-        "ascApiKeyPath": "./credentials/AuthKey_8RJ2VLQ752.p8",
+        "ascApiKeyPath": "./credentials/AuthKey_TSS8TW85GV.p8",
         "ascApiKeyIssuerId": "378df18b-7372-4d30-a97f-81dc6365084f",
-        "ascApiKeyId": "8RJ2VLQ752"
+        "ascApiKeyId": "TSS8TW85GV"
       },
       "android": {
         "track": "internal"

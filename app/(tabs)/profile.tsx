@@ -22,8 +22,9 @@ import { ListingCard } from '@/components/ListingCard';
 import { Rating } from '@/components/Rating';
 import { ReviewList } from '@/components/ReviewList';
 import { Header, Screen } from '@/components/Screen';
-import { startSellerOnboarding } from '@/services/payments';
+import { dac7Status, type Dac7Status } from '@/services/dac7';
 import { fetchPendingReviews, fetchReviews } from '@/services/reviews';
+import { convoyageDemand, type ConvoyageDemand } from '@/services/trips';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
@@ -34,31 +35,7 @@ import type { ListingStatus, PendingReview, Review } from '@/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [payLoading, setPayLoading] = useState(false);
 
-  /**
-   * Ouvre le formulaire d'identité hébergé par Stripe. Le lien est à usage
-   * unique et de courte durée : on en redemande un à chaque fois plutôt que
-   * d'en garder un périmé.
-   */
-  const openPaymentSetup = async () => {
-    setPayLoading(true);
-    try {
-      const { ready, url } = await startSellerOnboarding();
-      if (ready) {
-        Alert.alert(
-          'Tout est en règle',
-          'Votre identité est vérifiée. Vos acheteurs peuvent payer dans l’application, et vous touchez votre prix entier.',
-        );
-        return;
-      }
-      if (url) await Linking.openURL(url);
-    } catch (error) {
-      Alert.alert('Inscription impossible', (error as Error).message);
-    } finally {
-      setPayLoading(false);
-    }
-  };
 
   const { user, signOut } = useAuth();
   const { listingsBySeller, favoriteListings, setStatus, removeListing, isFavorite, toggleFavorite } =
@@ -67,6 +44,8 @@ export default function ProfileScreen() {
   const [pending, setPending] = useState<PendingReview[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [sellingListingId, setSellingListingId] = useState<string | null>(null);
+  const [convoyage, setConvoyage] = useState<ConvoyageDemand | null>(null);
+  const [dac7, setDac7] = useState<Dac7Status | null>(null);
   const { enabled: pushEnabled, unavailable: pushUnavailable, toggle: togglePush } = usePush();
 
   const myListings = useMemo(
@@ -80,6 +59,8 @@ export default function ProfileScreen() {
       if (!user) return;
       fetchPendingReviews(user.id).then(setPending).catch(() => setPending([]));
       fetchReviews(user.id).then(setReviews).catch(() => setReviews([]));
+      convoyageDemand().then(setConvoyage).catch(() => setConvoyage(null));
+      dac7Status().then(setDac7).catch(() => setDac7(null));
     }, [user]),
   );
 
@@ -239,7 +220,7 @@ export default function ProfileScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={openPaymentSetup}
+            onPress={() => router.push('/account/payment')}
             style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
           >
             <MaterialCommunityIcons
@@ -255,11 +236,115 @@ export default function ProfileScreen() {
                   : 'Vérifiez votre identité auprès de Stripe pour vendre en paiement sécurisé.'}
               </Text>
             </View>
-            {payLoading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          {/* Rangée réservée aux vendeurs : la déclaration ne concerne
+              personne d'autre, et un acheteur qui lirait « fiscal » dans son
+              compte se demanderait ce qu'on lui veut. */}
+          {user.acceptsPayments || dac7?.reportable ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/account/dac7')}
+              style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+            >
+              <MaterialCommunityIcons
+                name={dac7?.reportable && !dac7.complete ? 'file-alert-outline' : 'file-document-outline'}
+                size={19}
+                color={dac7?.reportable && !dac7.complete ? colors.danger : colors.text}
+              />
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>Déclaration fiscale</Text>
+                <Text style={styles.settingHint}>
+                  {dac7?.reportable && !dac7.complete
+                    ? `Vos ventes dépassent le seuil légal : sans votre numéro fiscal, les virements seront suspendus sous ${dac7.graceDays} jours.`
+                    : dac7?.reportable
+                      ? 'Votre dossier est complet. Rien à faire.'
+                      : `Rien à faire tant que vous restez sous ${dac7?.salesThreshold ?? 30} ventes par an.`}
+                </Text>
+              </View>
+              {dac7?.reportable && !dac7.complete ? (
+                <View style={[styles.pastille, styles.pastilleAlerte]}>
+                  <Text style={styles.pastilleTexte}>!</Text>
+                </View>
+              ) : null}
               <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
-            )}
+            </Pressable>
+          ) : null}
+
+          {user.isModerator ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/moderation')}
+              style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+            >
+              <MaterialCommunityIcons name="shield-search" size={19} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>Modération</Text>
+                <Text style={styles.settingHint}>
+                  Comptes qui remontent et signalements en attente.
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/account/alerts')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="bell-ring-outline" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Mes alertes</Text>
+              <Text style={styles.settingHint}>
+                Être prévenu dès qu’une annonce correspond à vos recherches.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/trips')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="map-marker-path" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Convoyage entre archers</Text>
+              {/* Trois états, et aucun qui invente : on annonce un nombre
+                  quand on sait d'où part ce membre, on dit franchement qu'il
+                  n'y a rien quand c'est le cas, et on se rabat sur
+                  l'invitation quand on ignore où il est. */}
+              <Text style={styles.settingHint}>
+                {convoyage && convoyage.listings > 0
+                  ? `${convoyage.listings} ${convoyage.listings === 1 ? 'annonce pourrait partir' : 'annonces pourraient partir'} de moins de ${convoyage.radiusKm} km de chez vous. Déclarez un trajet pour les porter.`
+                  : convoyage && convoyage.zips.length > 0
+                    ? `Rien à porter à moins de ${convoyage.radiusKm} km de chez vous en ce moment. Déclarez un trajet, il sera proposé aux acheteurs.`
+                    : 'Vous allez à une compétition ? Faites voyager l’arc d’un autre archer.'}
+              </Text>
+            </View>
+            {convoyage && convoyage.listings > 0 ? (
+              <View style={styles.pastille}>
+                <Text style={styles.pastilleTexte}>{convoyage.listings}</Text>
+              </View>
+            ) : null}
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/account/address')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="package-variant-closed" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Adresse d’expédition</Text>
+              <Text style={styles.settingHint}>
+                D’où partent vos colis. Elle reste privée et sert à éditer vos étiquettes.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
           </Pressable>
 
           <Pressable
@@ -523,6 +608,17 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing.sm },
   actionButton: { flex: 1, paddingHorizontal: spacing.md },
   settingDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  pastille: {
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 7,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pastilleAlerte: { backgroundColor: colors.danger },
+  pastilleTexte: { fontSize: 12.5, fontWeight: '800', color: colors.onPrimary },
   signOut: { marginTop: spacing.sm },
   deleteRow: { alignItems: 'center', paddingVertical: spacing.sm },
   deleteLabel: { fontSize: 13, fontWeight: '600', color: colors.danger },

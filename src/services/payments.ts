@@ -12,18 +12,42 @@ import { fail, supabase } from '@/services/supabase';
 export type Cents = number;
 
 export const PROTECTION_RATE = 0.05;
+/** Au-delà de 300 €, le taux tombe à 2,5 %. */
+export const PROTECTION_RATE_HIGH = 0.025;
+export const PROTECTION_TIER: Cents = 30000;
 export const PROTECTION_FIXED: Cents = 70;
 
 /**
- * Frais de protection à la charge de l'acheteur : 5 % du prix + 0,70 €.
- * Le vendeur touche son prix entier.
+ * Remise vérifiée : un forfait, quel que soit le prix de l'arc.
+ *
+ * Nous n'encaissons que ces 0,99 € — l'argent de l'objet passe directement
+ * d'une main à l'autre. Ce n'est donc pas une protection acheteur : il n'y a
+ * rien à rembourser, et les écrans doivent le dire.
+ */
+export const HANDOVER_FEE: Cents = 99;
+
+/**
+ * Frais de protection à la charge de l'acheteur, dégressifs : 0,70 € fixes,
+ * 5 % jusqu'à 300 €, puis 2,5 % au-delà. Le vendeur touche son prix entier.
+ *
+ * Le taux décroît parce qu'un pourcentage linéaire est calibré pour des
+ * vêtements à quinze euros. Sur un arc à mille deux cents, il produirait
+ * soixante euros de frais — soit exactement l'argument qui pousse un acheteur
+ * à proposer un virement en dehors de l'application.
  *
  * Cette règle existe aussi en base (fonction `protection_fee`), qui fait foi
  * au moment de l'encaissement. Ici, c'est pour l'afficher avant l'achat ; un
  * test vérifie que les deux ne divergent jamais.
  */
 export function protectionFee(itemAmount: Cents): Cents {
-  return Math.max(0, Math.round(itemAmount * PROTECTION_RATE) + PROTECTION_FIXED);
+  const basse = Math.min(Math.max(0, itemAmount), PROTECTION_TIER);
+  const haute = Math.max(0, itemAmount - PROTECTION_TIER);
+  return Math.max(
+    0,
+    PROTECTION_FIXED +
+      Math.round(basse * PROTECTION_RATE) +
+      Math.round(haute * PROTECTION_RATE_HIGH),
+  );
 }
 
 export interface PriceBreakdown {
@@ -42,6 +66,15 @@ export function priceBreakdown(itemAmount: Cents, shippingAmount: Cents = 0): Pr
     protection,
     total: itemAmount + shippingAmount + protection,
   };
+}
+
+/**
+ * En remise, l'acheteur ne nous règle que la mise en relation. Le prix de
+ * l'arc figure pour mémoire, mais ne s'ajoute pas au total : il se paie sur
+ * place.
+ */
+export function handoverBreakdown(itemAmount: Cents): PriceBreakdown {
+  return { item: itemAmount, shipping: 0, protection: HANDOVER_FEE, total: HANDOVER_FEE };
 }
 
 /** Des centimes vers « 12,50 € ». */
@@ -76,6 +109,14 @@ export interface Order {
   protectionAmount: Cents;
   totalAmount: Cents;
   status: OrderStatus;
+  /** direct : l'argent de l'objet n'est jamais passé par nous. */
+  paymentMode: 'escrow' | 'direct';
+  shippingMode: 'home' | 'relay' | 'hand' | 'archer';
+  relayLabel?: string;
+  /** Convoyage : l'archer qui porte le colis, et ce qu'il reçoit. */
+  carrierId?: string;
+  carrierAmount?: Cents;
+  pickedUpAt?: string;
   trackingCarrier?: string;
   trackingNumber?: string;
   paidAt?: string;
@@ -96,6 +137,12 @@ interface OrderRow {
   protection_amount: number;
   total_amount: number;
   status: OrderStatus;
+  payment_mode: 'escrow' | 'direct';
+  shipping_mode: 'home' | 'relay' | 'hand' | 'archer';
+  relay_label: string | null;
+  carrier_id: string | null;
+  carrier_amount: number | null;
+  picked_up_at: string | null;
   tracking_carrier: string | null;
   tracking_number: string | null;
   paid_at: string | null;
@@ -116,6 +163,12 @@ const toOrder = (row: OrderRow): Order => ({
   protectionAmount: row.protection_amount,
   totalAmount: row.total_amount,
   status: row.status,
+  paymentMode: row.payment_mode,
+  shippingMode: row.shipping_mode,
+  relayLabel: row.relay_label ?? undefined,
+  carrierId: row.carrier_id ?? undefined,
+  carrierAmount: row.carrier_amount ?? undefined,
+  pickedUpAt: row.picked_up_at ?? undefined,
   trackingCarrier: row.tracking_carrier ?? undefined,
   trackingNumber: row.tracking_number ?? undefined,
   paidAt: row.paid_at ?? undefined,
@@ -126,7 +179,7 @@ const toOrder = (row: OrderRow): Order => ({
 });
 
 const ORDER_SELECT =
-  'id, listing_id, listing_title, buyer_id, seller_id, item_amount, shipping_amount, protection_amount, total_amount, status, tracking_carrier, tracking_number, paid_at, shipped_at, delivered_at, released_at, created_at';
+  'id, listing_id, listing_title, buyer_id, seller_id, item_amount, shipping_amount, protection_amount, total_amount, status, payment_mode, shipping_mode, relay_label, carrier_id, carrier_amount, picked_up_at, tracking_carrier, tracking_number, paid_at, shipped_at, delivered_at, released_at, created_at';
 
 /** Les commandes du membre connecté, achats et ventes confondus. */
 export async function fetchOrders(): Promise<Order[]> {
@@ -166,6 +219,25 @@ export async function markShipped(
 export async function confirmReceived(orderId: string): Promise<void> {
   const { error } = await supabase.rpc('confirm_order_received', { order_id: orderId });
   if (error) fail(error, 'Confirmation impossible.');
+}
+
+/**
+ * Le code que l'acheteur montre au vendeur, une fois l'arc essayé.
+ *
+ * Il ne se lit pas dans la table : la colonne est fermée en base, justement
+ * pour que le vendeur ne puisse pas solder la vente sans avoir rencontré
+ * personne.
+ */
+export async function fetchHandoverCode(orderId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('handover_code', { order_id: orderId });
+  if (error) fail(error, 'Code de remise indisponible.');
+  return String(data);
+}
+
+/** Le vendeur clôt la vente en saisissant le code que l'acheteur lui donne. */
+export async function confirmHandover(orderId: string, code: string): Promise<void> {
+  const { error } = await supabase.rpc('confirm_handover', { order_id: orderId, code });
+  if (error) fail(error, 'Code incorrect.');
 }
 
 /** Gèle l'argent en attendant qu'un humain tranche. */
@@ -253,19 +325,66 @@ export async function startSellerOnboarding(): Promise<OnboardingState> {
   return { ready: !!payload.ready, url: payload.url };
 }
 
+/**
+ * Le lien vers le tableau de bord Stripe du vendeur.
+ *
+ * C'est là qu'il voit ses versements, corrige son IBAN et répond à une
+ * demande de justificatif. Nous ne construisons pas cet écran : le faire nous
+ * obligerait à manipuler des données bancaires que nous nous engageons à ne
+ * pas conserver.
+ *
+ * Le lien ne sert qu'une fois et expire vite. On le demande donc au moment de
+ * l'ouvrir, jamais à l'avance.
+ */
+export async function sellerDashboardUrl(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('stripe-connect', {
+    body: { action: 'dashboard' },
+  });
+  if (error) throw new Error(await edgeMessage(error, 'Tableau de bord indisponible.'));
+  const url = (data as { url?: string })?.url;
+  if (!url) throw new Error('Stripe n’a pas renvoyé de lien.');
+  return url;
+}
+
 export interface Checkout {
   orderId: string;
   clientSecret: string;
   breakdown?: PriceBreakdown;
 }
 
+/** Le choix de livraison transmis au paiement. */
+export interface CheckoutDelivery {
+  mode: 'home' | 'relay' | 'hand' | 'archer';
+  /** Exigée par tous les transporteurs sur l'étiquette. */
+  civility?: 'M' | 'Mme';
+  name?: string;
+  address?: string;
+  zip?: string;
+  city?: string;
+  country?: string;
+  phone?: string;
+  operator?: string;
+  service?: string;
+  relayCode?: string;
+  relayLabel?: string;
+  /** Le trajet retenu, en convoyage entre archers. */
+  tripId?: string;
+}
+
 /**
  * Prépare le paiement d'une annonce. Les montants renvoyés font foi : ceux
  * affichés avant l'achat ne sont qu'une estimation.
+ *
+ * Le tarif du port n'est pas transmis, seulement l'offre retenue : la
+ * fonction Edge la recote elle-même. Envoyer le prix reviendrait à laisser
+ * l'acheteur fixer son propre port.
  */
-export async function createCheckout(listingId: string): Promise<Checkout> {
+export async function createCheckout(
+  listingId: string,
+  delivery: CheckoutDelivery = { mode: 'hand' },
+): Promise<Checkout> {
   const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-    body: { listingId },
+    body: { listingId, delivery },
   });
   if (error) throw new Error(await edgeMessage(error, 'Paiement impossible pour le moment.'));
   const payload = data as { orderId?: string; clientSecret?: string; error?: string; breakdown?: PriceBreakdown };

@@ -215,28 +215,85 @@ deux plateformes seront de nouveau alignées.
 
 ### La signature
 
-C'est le seul point qui peut coûter la fiche, et il se vérifie dans la console
-Play, **Configuration → Intégrité de l'application**.
+Deux clés, et il faut les distinguer, parce que l'une se remplace et l'autre
+non.
 
-**Si la signature d'application Play est activée** — le cas normal, et le cas
-par défaut pour toute fiche créée après août 2021 — Google détient la clé
-finale. La clé qui signe votre `.aab` n'est qu'une clé d'envoi, et elle se
-remplace : EAS en génère une, vous la déclarez une fois dans la console, et
-c'est réglé.
+La **clé de signature d'application** est celle que les téléphones vérifient
+pour accepter une mise à jour. Elle est irremplaçable : si elle est perdue,
+la fiche l'est aussi. Ici la **signature d'application Play est activée** —
+console Play, *Protégé avec Play → Protection Play Store → Protéger la clé de
+signature d'application : « Versions signées par Play »*. Google la détient
+donc, à l'abri, et il n'y a rien à faire de ce côté.
+
+La **clé d'importation** ne sert qu'à prouver à Google que le `.aab` vient
+bien de vous. Google la vérifie, la retire, et resigne avec la vraie clé. Elle
+se remplace, et c'est justement là qu'il y a du travail.
+
+Le certificat d'importation enregistré sur la fiche ne nous appartient pas :
+
+```
+subject = C=US, ST=Delaware, L=Middletown, O=AppMySite Inc, OU=IT, CN=IT Manager
+SHA-1   = 00:4E:2E:DD:EB:0C:C4:87:12:D6:02:29:9E:1A:1D:ED:BD:11:67:28
+SHA-256 = 4B:DC:C8:8E:62:AA:9C:76:80:91:2C:67:2F:FD:3A:14:3B:CB:5A:8F:22:2C:BD:D8:55:3E:8A:5D:CB:07:10:A6
+émis le 19 avril 2023, valable jusqu'au 4 septembre 2050
+```
+
+**AppMySite** est le prestataire qui avait fabriqué l'ancienne application,
+l'habillage du site web. La clé privée correspondante est chez eux, pas chez
+nous. Aucun `.aab` compilé par EAS ne sera accepté tant que ce certificat
+reste celui de la fiche.
+
+Il faut donc demander une **réinitialisation de la clé d'importation**. C'est
+gratuit, prévu par Google, et sans effet sur la fiche ni sur les
+installations. Trois étapes.
+
+**1. Fabriquer la nouvelle clé.**
+
+```bash
+mkdir -p credentials
+keytool -genkeypair -v \
+  -keystore credentials/archersmarket-upload.jks \
+  -alias upload -keyalg RSA -keysize 2048 -validity 10000
+```
+
+`keytool` demande deux mots de passe (celui du magasin et celui de la clé —
+mettez le même) puis quelques champs d'identité : nom, organisation, pays. Ils
+n'ont aucune importance technique, ils ne s'affichent nulle part.
+
+**2. En extraire le certificat public**, au format que le formulaire attend :
+
+```bash
+keytool -export -rfc \
+  -keystore credentials/archersmarket-upload.jks \
+  -alias upload -file credentials/upload_certificate.pem
+```
+
+**3. Demander la réinitialisation.** Console Play, *Protégé avec Play →
+Protection Play Store → Gérer la signature d'application Play*, section
+**Certificat de clé d'importation**, bouton **Demander la réinitialisation de
+la clé d'importation**. Déposez le `.pem`, indiquez le motif — « la clé
+d'importation appartient à un ancien prestataire, l'application est
+désormais développée en interne » — et validez. Google répond sous 24 à 48
+heures.
+
+Si le bouton affiche « Autorisation nécessaire », c'est que la session n'est
+pas celle du **propriétaire du compte**. Cette demande n'est ouverte qu'à lui,
+ou à un utilisateur explicitement autorisé à gérer la signature d'application.
+
+**Puis confier la clé à EAS :**
 
 ```bash
 npx eas-cli credentials --platform android
 ```
 
-Choisissez le profil `production`, puis la création d'un nouveau keystore.
-EAS affiche ensuite l'empreinte SHA-1 du certificat d'envoi ; c'est elle que
-la console Play attend.
+Profil `production` → *Keystore* → *Set up a new keystore* → choisir de
+téléverser son propre fichier, et donner `credentials/archersmarket-upload.jks`
+avec ses mots de passe.
 
-**Si elle n'est pas activée**, votre `.aab` doit être signé avec **exactement
-le keystore de la première publication**, celui de 2024. Il n'existe aucun
-recours en cas de perte : Google refuse la mise à jour, et la fiche, ses
-installations et ses avis restent figés. Si vous retrouvez le fichier `.jks`
-ou `.keystore` avec son mot de passe, `eas credentials` sait l'importer.
+Gardez le fichier et ses mots de passe, mais sans angoisse : la signature
+d'application Play étant active, une clé d'importation perdue se
+réinitialise à nouveau par la même procédure. C'est tout l'intérêt du
+dispositif — le seul secret irremplaçable est chez Google.
 
 ## Compiler
 

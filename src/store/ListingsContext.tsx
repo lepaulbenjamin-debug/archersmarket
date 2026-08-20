@@ -2,8 +2,28 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 
 import * as favoritesService from '@/services/favorites';
 import * as listingsService from '@/services/listings';
+import { supabase } from '@/services/supabase';
 import { useAuth } from '@/store/AuthContext';
 import type { Listing, ListingFilters, ListingStatus, NewListingInput } from '@/types';
+
+/**
+ * Une panne d'un instant, qui ne mérite pas d'être annoncée.
+ *
+ * « JWT issued at future » vient de PostgREST : il compare l'instant d'émission
+ * du jeton à sa propre horloge et refuse tout ce qui vient du futur, sans la
+ * moindre tolérance. Une seconde de dérive entre le serveur qui frappe le jeton
+ * et celui qui le lit suffit — et la tentative suivante passe.
+ *
+ * Les coupures réseau du premier instant relèvent du même traitement : le
+ * téléphone qui sort de veille n'a pas toujours retrouvé sa connexion quand
+ * l'application demande ses annonces.
+ */
+const PASSAGERS = ['issued at future', 'jwt', 'fetch', 'network', 'timeout', 'abort'];
+
+const passager = (err: unknown): boolean => {
+  const message = (err as Error)?.message?.toLowerCase() ?? '';
+  return PASSAGERS.some((indice) => message.includes(indice));
+};
 
 interface ListingsValue {
   listings: Listing[];
@@ -32,7 +52,39 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Recharge les annonces, avec une seconde tentative en cas d'échec passager.
+   *
+   * Le cas visé est « JWT issued at future » : PostgREST refuse un jeton dont
+   * l'instant d'émission dépasse sa propre horloge, sans la moindre tolérance.
+   * Une seconde de dérive entre le serveur qui frappe le jeton et celui qui le
+   * lit suffit à faire échouer le premier chargement — et l'archer qui ouvre
+   * l'application voit un bandeau rouge annonçant une panne, pour un incident
+   * qui aura disparu avant qu'il ait fini de le lire.
+   *
+   * On rafraîchit donc la session et on retente une fois. Une seule : au-delà,
+   * c'est une vraie panne, et la masquer par des tentatives en série
+   * n'apporterait qu'un écran figé.
+   */
   const refresh = useCallback(async () => {
+    try {
+      setListings(await listingsService.fetchListings());
+      setError(null);
+      return;
+    } catch (err) {
+      if (!passager(err)) {
+        setError((err as Error).message);
+        return;
+      }
+    }
+
+    try {
+      await supabase.auth.refreshSession();
+    } catch {
+      // Sans session valide, la lecture publique des annonces reste possible :
+      // ce n'est pas une raison de renoncer à la seconde tentative.
+    }
+
     try {
       setListings(await listingsService.fetchListings());
       setError(null);

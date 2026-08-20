@@ -1,0 +1,37 @@
+Archers Market est la place de marché du matériel de tir à l’arc d’occasion, entre archers, en France.
+
+Arcs classiques, à poulies, longbows, branches, poignées, viseurs, stabilisateurs, décocheurs, flèches, tubes, plumes, carquois, cibles, protections, outillage : ce qui dort dans votre local trouve preneur, et ce que vous cherchez existe déjà quelque part.
+
+VOTRE ARGENT NE PART PAS DANS LE VIDE
+
+Vous réglez à la commande, mais la somme reste chez nous. Le vendeur n’est payé qu’à votre confirmation de réception, ou quatorze jours après l’envoi. Si le colis n’arrive jamais, ou si le matériel ne correspond pas à l’annonce, vous êtes remboursé.
+
+ON TROUVE QUI ACCEPTE VOTRE COLIS
+
+Un arc de soixante-dix pouces, tous les transporteurs n’en veulent pas. On compare pour vous ceux qui l’acceptent, on affiche le tarif, on édite l’étiquette et on assure l’envoi à sa valeur déclarée. Point relais ou remise à domicile, au choix.
+
+LE CONVOYAGE ENTRE ARCHERS
+
+Un archer qui descend au concours régional passe peut-être à cent mètres de chez vous. Quand un trajet existe entre la ville du vendeur et la vôtre, l’application vous le signale avant même le paiement. La remise se fait de la main à la main, et le transport ne coûte presque rien.
+
+UNE ANNONCE À PARTIR D’UNE PHOTO
+
+Photographiez votre matériel : le titre, la catégorie et les caractéristiques se pré-remplissent. Vous relisez, vous corrigez ce qu’il faut, vous publiez.
+
+ENTRE GENS DU MÊME SPORT
+
+Chaque membre a un profil : sa ville, son club, sa discipline, et les avis laissés après ses ventes. On sait à qui on parle. Messagerie, offres de prix, suivi de commande et litiges se règlent dans l’application.
+
+CE QUE ÇA COÛTE
+
+Publier une annonce est gratuit, sans limite de nombre, et le vendeur touche son prix entier. C’est l’acheteur qui paie la protection : 0,70 € plus 5 % jusqu’à 300 €, puis 2,5 % au-delà — un arc à 1 200 € coûte donc bien moins cher en frais qu’un pourcentage unique. Pour une remise en main propre vérifiée, c’est 0,99 €, quel que soit le prix. Pas d’abonnement, pas d’option payante, aucune mise en avant à acheter.
+
+CE QU’ON NE FAIT PAS
+
+Aucune publicité. Aucun traceur, aucun outil de mesure d’audience, aucun identifiant publicitaire. Aucune revente de données. Aucune position GPS : la ville est celle que vous saisissez. Vos conversations ne sont lues par personne, et votre compte s’efface depuis l’application, en deux écrans.
+
+Archers Market est édité en France. Les paiements sont opérés par Stripe, l’expédition par Boxtal, et les données hébergées à Londres, au Royaume-Uni.
+
+Conditions générales : https://archersmarket.fr/cgu.html
+Confidentialité : https://archersmarket.fr/confidentialite.html
+Aide et contact : https://archersmarket.fr/support.html

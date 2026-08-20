@@ -2,7 +2,7 @@
   "expo": {
     "name": "Archers Market",
     "slug": "archersmarket",
-    "version": "2.0.0",
+    "version": "2.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "archersmarket",
@@ -31,10 +31,9 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "edgeToEdgeEnabled": true,
       "versionCode": 2,
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "web": {
@@ -47,7 +46,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Archers Market a besoin d'accéder à vos photos pour illustrer vos annonces."
+          "photosPermission": "Archers Market a besoin d'accéder à vos photos pour illustrer vos annonces.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       [

@@ -266,7 +266,50 @@ fait évoluer, et sous-déclarer là-dessus coûte la suspension.
 
 ---
 
-## 7. L'ordre dans lequel remplir
+## 7. « Protégé avec Play » : ce qu'on active, et ce qu'on laisse
+
+La page affiche quatre blocs avec des compteurs — « 0 service actif sur 7 »,
+« 0 sur 4 ». C'est une jauge d'incitation, pas une liste de manques : deux de
+ces blocs ne concernent pas cette application, et leur compteur restera à zéro
+pour toujours.
+
+| Bloc | État | À faire |
+| --- | --- | --- |
+| Protection automatique | 1 / 1, déjà active | rien |
+| API Play Integrity | 0 / 7 | rien pour l'instant |
+| Protection Play Store | 6 / 7 | rien pour l'instant |
+| Protection Play Billing | 0 / 4 | **sans objet** |
+
+**La facturation Play** ne sert qu'aux biens et services numériques. Archers
+Market vend des arcs d'occasion et encaisse par Stripe : il n'y a aucune
+transaction Play à protéger. Le compteur restera à zéro, et c'est normal.
+
+**L'API Play Integrity** n'est pas un interrupteur. Elle demande d'intégrer un
+SDK natif dans l'application et de vérifier ses verdicts côté serveur — du
+vrai travail, pour un gain qui n'est pas celui qu'on croit. La sécurité
+d'Archers Market ne repose pas sur la confiance accordée au téléphone, mais
+sur la sécurité au niveau ligne, côté base : une requête forgée depuis un
+appareil rooté se heurte exactement aux mêmes règles qu'une autre. Play
+Integrity sert contre l'abus automatisé — comptes créés en série, moissonnage
+des annonces. Le jour où ça arrive, on la branchera ; le faire avant, c'est se
+donner du travail contre un problème qu'on n'a pas.
+
+**Le service manquant de la protection Play Store** est le seul vrai choix, et
+c'est un simple interrupteur : *Empêcher les installations sur les appareils à
+risque*. Activé, le Play Store recueille un verdict sur l'appareil lui-même et
+s'en sert pour masquer la fiche, ou refuser l'installation, sur les téléphones
+rootés, les ROM non certifiées et les émulateurs.
+
+Je le laisse **éteint au lancement**. L'asymétrie est nette : à zéro
+utilisateur, un archer légitime perdu parce qu'il fait tourner LineageOS est
+un coût immédiat, tandis que la fraude automatisée demande du volume pour
+valoir la peine de quiconque. Le paiement est de toute façon tenu par Stripe
+et par la séquestre, pas par l'attestation d'appareil. On le rallumera quand
+il y aura du trafic — c'est un clic, et c'est réversible.
+
+---
+
+## 8. L'ordre dans lequel remplir
 
 Le tableau de bord de la console liste les tâches en vrac. Cet ordre-ci évite
 de refaire deux fois le même travail :

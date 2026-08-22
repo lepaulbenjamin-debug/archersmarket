@@ -304,6 +304,16 @@ Android sont nettement moins gourmands et le forfait gratuit les encaisse.
 npx eas-cli build --platform android --profile production
 ```
 
+**On peut compiler sans attendre la réponse de Google.** La demande de
+réinitialisation met vingt-quatre à quarante-huit heures ; le `.aab`, lui, est
+déjà signé avec la nouvelle clé. Compiler tout de suite a même un intérêt :
+c'est la première compilation Android du projet, et s'il doit y avoir une
+surprise Gradle, autant la découvrir pendant l'attente plutôt qu'après.
+
+Ce qu'il ne faut pas faire, c'est téléverser avant l'accord. Google refuserait
+le fichier — « votre App Bundle est signé avec la mauvaise clé » — puisque le
+certificat enregistré serait encore celui d'AppMySite.
+
 Le profil `production` produit un **App Bundle** (`.aab`), le seul format que
 Google Play accepte aujourd'hui. EAS fournit un lien de téléchargement à la
 fin.

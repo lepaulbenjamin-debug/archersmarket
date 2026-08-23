@@ -58,9 +58,23 @@ export async function signIn({ email, password }: Credentials): Promise<User> {
   return profileOf(data.user.id, data.user.email ?? undefined);
 }
 
-export async function signUp(input: SignUpInput): Promise<User> {
+/**
+ * Ce que rend une inscription.
+ *
+ * Quand la confirmation par e-mail est exigée, Supabase crée le compte mais
+ * n'ouvre aucune session : il attend le clic sur le lien. Ce n'est pas une
+ * erreur, et le traiter comme telle affichait un texte rouge sous le champ
+ * e-mail à quelqu'un dont l'inscription venait de réussir — la seule lecture
+ * possible étant « ça n'a pas marché ».
+ */
+export type SignUpResult =
+  | { confirme: true; user: User }
+  | { confirme: false; email: string };
+
+export async function signUp(input: SignUpInput): Promise<SignUpResult> {
+  const email = input.email.trim();
   const { data, error } = await supabase.auth.signUp({
-    email: input.email.trim(),
+    email,
     password: input.password,
     options: {
       // Reprises par le trigger handle_new_user pour créer le profil.
@@ -79,12 +93,55 @@ export async function signUp(input: SignUpInput): Promise<User> {
         : error.message,
     );
   }
-  if (!data.session) {
-    throw new Error(
-      'Compte créé. Confirmez votre adresse e-mail via le lien reçu, puis connectez-vous.',
-    );
+  if (!data.session) return { confirme: false, email };
+  return { confirme: true, user: await profileOf(data.user!.id, data.user!.email ?? undefined) };
+}
+
+export interface AuthTokens {
+  access_token: string;
+  refresh_token: string;
+}
+
+/**
+ * Extrait les jetons d'un lien de retour.
+ *
+ * Le lien reçu par e-mail passe par `/auth/v1/verify`, qui redirige vers
+ * `archersmarket://` en plaçant les jetons dans le fragment — après le `#`.
+ * Un fragment ne franchit jamais un serveur, ce qui est précisément l'intérêt
+ * du procédé, mais implique que personne ne le lit à notre place :
+ * `detectSessionInUrl` est une mécanique de navigateur, sans effet ici.
+ */
+export function tokensFromUrl(url: string): AuthTokens | null {
+  const fragment = url.split('#')[1];
+  if (!fragment) return null;
+  const params = new URLSearchParams(fragment);
+  const access_token = params.get('access_token');
+  const refresh_token = params.get('refresh_token');
+  return access_token && refresh_token ? { access_token, refresh_token } : null;
+}
+
+/** Ouvre la session portée par un lien de confirmation. */
+export async function signInWithTokens(tokens: AuthTokens): Promise<User> {
+  const { data, error } = await supabase.auth.setSession(tokens);
+  if (error || !data.user) fail(error, 'Ce lien n’est plus valable.');
+  return profileOf(data.user.id, data.user.email ?? undefined);
+}
+
+/**
+ * Renvoie l'e-mail de confirmation.
+ *
+ * Supabase limite la cadence à un envoi par minute et le dit en anglais, avec
+ * le nombre de secondes restantes. On traduit plutôt que de laisser passer :
+ * c'est le message que verra le plus souvent quelqu'un qui appuie deux fois.
+ */
+export async function resendConfirmation(email: string): Promise<void> {
+  const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+  if (!error) return;
+  const attente = /after (\d+) seconds?/i.exec(error.message);
+  if (attente) {
+    throw new Error(`Patientez ${attente[1]} secondes avant un nouvel envoi.`);
   }
-  return profileOf(data.user!.id, data.user!.email ?? undefined);
+  fail(error, 'Impossible de renvoyer l’e-mail pour l’instant.');
 }
 
 export async function signOut(): Promise<void> {

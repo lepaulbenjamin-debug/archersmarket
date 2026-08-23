@@ -87,6 +87,7 @@ function RootNavigator() {
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
         <Stack.Screen name="forgot-password" options={{ presentation: 'modal' }} />
         <Stack.Screen name="register" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="verify-email" options={{ presentation: 'modal' }} />
       </Stack>
 
       {/* Posé par-dessus le navigateur plutôt qu'à sa place : il doit pouvoir

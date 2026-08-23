@@ -76,11 +76,11 @@ const ECRANS = [
     icon: 'lock-check-outline',
     titre: 'Le vendeur n’est payé qu’après vous',
     texte:
-      'Vous réglez à la commande, mais la somme reste chez nous tant que l’arc n’est pas chez vous.',
+      'Vous réglez à la commande, mais la somme reste bloquée tant que l’arc n’est pas chez vous.',
     points: [
       'Le virement part à votre confirmation, ou quatorze jours après l’envoi',
-      'Un doute, une casse ? Vous gelez les fonds tant que rien n’est réglé',
-      'En main propre, vous ne réglez le vendeur qu’après avoir tiré l’arc',
+      'Un doute, une casse ? Signalez-le : rien n’est versé tant que ce n’est pas réglé',
+      'En main propre, vous ne réglez le vendeur qu’après avoir testé si besoin',
       'Protégé quel que soit le prix, là où ailleurs ça s’arrête à 2 500 €',
     ],
   },

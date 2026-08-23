@@ -398,22 +398,29 @@ Ce nettoyage des permissions touche `app.json`, donc l'empreinte, donc le
 soumise à la revue Apple, ne recevra plus les mises à jour à distance
 publiées depuis la branche.
 
-Ce n'est pas une impasse, mais il faut le savoir :
+Ce n'est pas une impasse, mais il faut le savoir. Ce qui compte à retenir
+n'est pas une empreinte — on ne les recopie pas à la main, et une mesure faite
+sur une autre machine peut différer — mais **le commit d'où chaque version est
+partie** :
 
-| Empreinte | Commit | Ce qu'elle sert |
-| --- | --- | --- |
-| `afe58d12bb2140d311cf454a6070b50713ea0db3` | `55cf9a8` | iOS build 11, en revue |
-| `2335e9baf4b0bc7329c180569028b30ad9768835` | après le nettoyage | iOS build 12 et suivants |
-| `5ab3df6c7e5686f3d3e63b6378e06291b41270f7` | après le nettoyage | première version Android |
+| Version | Commit d'origine |
+| --- | --- |
+| iOS build 11, en ligne sur l'App Store | `55cf9a8` |
+| iOS build 12 et suivants, première version Android | après le nettoyage des permissions |
 
 Pour corriger quelque chose sur le build 11 sans repasser par Apple, il faut
-publier depuis l'ancien commit :
+publier depuis ce commit-là :
 
 ```bash
-git checkout 55cf9a8
-# la correction, puis :
+git checkout -b correctif-build11 55cf9a8
+# on y reporte la correction, puis :
 npx eas-cli update --branch production --platform ios --message "…"
 ```
+
+`eas update` affiche l'empreinte retenue et le nombre d'installations
+concernées. C'est la seule mesure qui fait foi : si elle ne correspond pas à
+celle du build visé, la mise à jour n'atteindra personne, et la commande le
+dit avant de publier.
 
 Cette gymnastique disparaît dès qu'un build 12 est en ligne : les deux
 plateformes repartent alors de la même empreinte que la branche.

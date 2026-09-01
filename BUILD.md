@@ -243,9 +243,14 @@ l'habillage du site web. La clé privée correspondante est chez eux, pas chez
 nous. Aucun `.aab` compilé par EAS ne sera accepté tant que ce certificat
 reste celui de la fiche.
 
-Il faut donc demander une **réinitialisation de la clé d'importation**. C'est
-gratuit, prévu par Google, et sans effet sur la fiche ni sur les
-installations. Trois étapes.
+**C'est fait.** La réinitialisation de la clé d'importation a été demandée et
+accordée par Google : le certificat enregistré sur la fiche est désormais le
+nôtre, et c'est `credentials/upload-keystore.jks` qui signe les envois. La
+procédure reste écrite ci-dessous — elle resservira le jour où cette clé sera
+perdue, et ce jour arrive toujours.
+
+La demande est gratuite, prévue par Google, et sans effet sur la fiche ni sur
+les installations. Trois étapes.
 
 **1. Fabriquer la nouvelle clé.**
 

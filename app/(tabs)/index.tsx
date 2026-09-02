@@ -142,6 +142,23 @@ export default function BrowseScreen() {
         </Pressable>
       </View>
 
+      {/* Deux faces du même marché : ce qui est à vendre, et ce que les gens
+          cherchent. La bascule est ici plutôt que dans un sixième onglet —
+          cinq est déjà la limite sur un téléphone, et la demande a sa place à
+          côté de l'offre. */}
+      <View style={styles.bascule}>
+        <View style={[styles.basculeChoix, styles.basculeActif]}>
+          <Text style={styles.basculeActifTexte}>Annonces</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/wanted')}
+          style={({ pressed }) => [styles.basculeChoix, pressed && styles.pressed]}
+        >
+          <Text style={styles.basculeTexte}>Recherches</Text>
+        </Pressable>
+      </View>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -255,6 +272,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surfaceAlt,
   },
+  bascule: {
+    flexDirection: 'row',
+    gap: 4,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
+    padding: 4,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  basculeChoix: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+  },
+  basculeActif: { backgroundColor: colors.surface },
+  basculeActifTexte: { fontSize: 13.5, fontWeight: '700', color: colors.text },
+  basculeTexte: { fontSize: 13.5, fontWeight: '600', color: colors.textMuted },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',

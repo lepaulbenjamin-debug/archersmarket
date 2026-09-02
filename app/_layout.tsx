@@ -80,6 +80,10 @@ function RootNavigator() {
         <Stack.Screen name="account/address" />
         <Stack.Screen name="account/alerts" />
         <Stack.Screen name="account/dac7" />
+        <Stack.Screen name="wanted/index" />
+        <Stack.Screen name="wanted/new" />
+        <Stack.Screen name="wanted/[id]" />
+        <Stack.Screen name="account/wanted-alerts" />
         <Stack.Screen name="trips/index" />
         <Stack.Screen name="trips/new" />
         <Stack.Screen name="order/[id]" />

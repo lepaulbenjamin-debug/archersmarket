@@ -1,0 +1,7 @@
+Archers Market est entièrement reconstruite. L'ancienne version affichait le site web dans une coque ; celle-ci est une vraie application Android.
+
+• Paiement protégé : le vendeur n'est payé qu'à votre confirmation
+• Expédition : seuls les transporteurs qui acceptent un arc de 130 cm, étiquette et assurance comprises
+• Convoyage entre archers pour les colis hors gabarit
+• Dites ce que vous cherchez, les vendeurs volontaires sont prévenus
+• Filtres par puissance, main d'arc, allonge, marque

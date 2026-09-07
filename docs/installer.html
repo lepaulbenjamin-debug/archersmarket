@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Installer l’application — Archers Market</title>
+    <meta
+      name="description"
+      content="Télécharger Archers Market sur iPhone et Android : le marché d’occasion entre archers, paiement protégé et envoi accompagné."
+    />
+    <link rel="icon" href="emblem.png" />
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Aperçu quand le lien est collé sur Facebook ou dans un message. -->
+    <meta property="og:title" content="Archers Market — le marché d’occasion entre archers" />
+    <meta
+      property="og:description"
+      content="Paiement protégé, envoi accompagné, convoyage entre archers. À installer sur iPhone et Android."
+    />
+    <meta property="og:image" content="https://archersmarket.fr/emblem.png" />
+    <meta property="og:url" content="https://archersmarket.fr/installer.html" />
+    <meta property="og:type" content="website" />
+
+    <style>
+      /* Propre à cette page : les boutons de magasin et la détection d'appareil.
+         Le reste vient de style.css, pour que la page reste celle du site. */
+      .magasins {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        margin: 28px 0 8px;
+      }
+
+      .magasin {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border: 1px solid var(--bord);
+        border-radius: 14px;
+        padding: 18px 20px;
+        background: var(--surface);
+        color: var(--texte);
+        text-decoration: none;
+        transition: border-color 0.15s, transform 0.15s;
+      }
+      .magasin:hover {
+        text-decoration: none;
+        border-color: var(--orange);
+        transform: translateY(-1px);
+      }
+
+      /* L'appareil détecté passe devant, et se signale sans crier. */
+      .magasin.recommande {
+        border-color: var(--orange);
+        background: var(--orange-soft);
+        order: -1;
+      }
+
+      .magasin svg {
+        flex: none;
+        width: 30px;
+        height: 30px;
+        fill: var(--anthracite);
+      }
+      .magasin-texte {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.35;
+      }
+      .magasin-petit {
+        font-size: 12.5px;
+        color: var(--texte-doux);
+      }
+      .magasin-grand {
+        font-size: 17px;
+        font-weight: 700;
+      }
+      .magasin-note {
+        font-size: 12.5px;
+        color: var(--orange-dark);
+        font-weight: 600;
+      }
+
+      .indisponible {
+        opacity: 0.55;
+        pointer-events: none;
+      }
+
+      .etapes {
+        counter-reset: etape;
+        list-style: none;
+        padding-left: 0;
+        margin: 16px 0 0;
+      }
+      .etapes li {
+        counter-increment: etape;
+        position: relative;
+        padding-left: 34px;
+        margin-bottom: 10px;
+      }
+      .etapes li::before {
+        content: counter(etape);
+        position: absolute;
+        left: 0;
+        top: 1px;
+        width: 22px;
+        height: 22px;
+        border-radius: 11px;
+        background: var(--orange);
+        color: #fff;
+        font-size: 12.5px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .magasin svg {
+          fill: #f7f7f8;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="bandeau">
+      <div class="bandeau-inner">
+        <a class="marque" href="/"><img src="emblem.png" alt="" />Archers Market</a>
+        <nav>
+          <a href="installer.html" aria-current="page">Installer</a>
+          <a href="support.html">Aide</a>
+          <a href="confidentialite.html">Confidentialité</a>
+          <a href="cgu.html">Conditions</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <h1>Installer Archers Market</h1>
+      <p class="chapo">
+        Le marché d’occasion entre archers : arcs, branches, poignées, viseurs, flèches. Paiement
+        protégé, envoi accompagné, et une application refaite de zéro.
+      </p>
+
+      <div class="magasins" id="magasins">
+        <a
+          class="magasin"
+          id="ios"
+          href="https://apps.apple.com/fr/app/id6448762227"
+          data-plateforme="ios"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M17.05 12.54c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3-.79-1.55.02-2.98.9-3.77 2.28-1.61 2.79-.41 6.92 1.15 9.18.76 1.11 1.67 2.35 2.86 2.31 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.78.74 3 .72 1.24-.02 2.02-1.13 2.78-2.24.88-1.29 1.24-2.54 1.26-2.6-.03-.01-2.41-.93-2.44-3.69M14.8 5.4c.63-.77 1.06-1.83.94-2.9-.91.04-2.01.61-2.67 1.37-.59.68-1.1 1.76-.96 2.8 1.01.08 2.05-.51 2.69-1.27"
+            />
+          </svg>
+          <span class="magasin-texte">
+            <span class="magasin-petit">iPhone et iPad</span>
+            <span class="magasin-grand">App Store</span>
+          </span>
+        </a>
+
+        <!--
+          Android est en test ouvert : le lien d'adhésion, et non la fiche du
+          magasin, qui sert encore l'ancienne application tant que la version
+          n'est pas promue en production.
+        -->
+        <a
+          class="magasin"
+          id="android"
+          href="https://play.google.com/apps/testing/app.archersmarket.android"
+          data-plateforme="android"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M17.6 9.48l1.84-3.18a.4.4 0 0 0-.7-.4l-1.86 3.22a11.5 11.5 0 0 0-9.76 0L5.26 5.9a.4.4 0 0 0-.7.4L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52M7 15.25a1.05 1.05 0 1 1 0-2.1 1.05 1.05 0 0 1 0 2.1m10 0a1.05 1.05 0 1 1 0-2.1 1.05 1.05 0 0 1 0 2.1"
+            />
+          </svg>
+          <span class="magasin-texte">
+            <span class="magasin-petit">Android</span>
+            <span class="magasin-grand">Google Play</span>
+            <span class="magasin-note">Version de test — ouverte à tous</span>
+          </span>
+        </a>
+      </div>
+
+      <p class="maj" id="autre-appareil"></p>
+
+      <div class="encart">
+        <p>
+          <strong>Sur Android, quelques secondes de plus.</strong> Le lien vous inscrit d’abord
+          comme testeur, puis le Play Store propose l’installation. C’est gratuit et vous pouvez
+          quitter le programme quand vous voulez.
+        </p>
+      </div>
+
+      <h2>Sur Android, en trois étapes</h2>
+      <ol class="etapes">
+        <li>Touchez le bouton Google Play ci-dessus, avec le compte Google de votre téléphone.</li>
+        <li>Sur la page qui s’ouvre, touchez <strong>Devenir testeur</strong>.</li>
+        <li>
+          Revenez au Play Store et installez l’application. Si elle n’apparaît pas tout de suite,
+          patientez une minute et rafraîchissez.
+        </li>
+      </ol>
+
+      <h2>Ce que fait l’application</h2>
+      <div class="cartes">
+        <div class="carte">
+          <h3>Des filtres de tir à l’arc</h3>
+          <p>
+            Gaucher, 38 livres, poignée 25 pouces : trois filtres et vous y êtes. Plus besoin
+            d’ouvrir cinquante annonces pour vérifier la compatibilité.
+          </p>
+        </div>
+        <div class="carte">
+          <h3>Le vendeur payé après vous</h3>
+          <p>
+            Vous réglez à la commande, mais la somme reste bloquée tant que le matériel n’est pas
+            chez vous. Un doute, une casse ? Rien n’est versé tant que ce n’est pas réglé.
+          </p>
+        </div>
+        <div class="carte">
+          <h3>On trouve qui prend le colis</h3>
+          <p>
+            Un arc de 70 pouces, tous les transporteurs n’en veulent pas. On ne propose que ceux
+            qui l’acceptent, on édite l’étiquette, et au-delà de 100 € l’envoi part assuré.
+          </p>
+        </div>
+        <div class="carte">
+          <h3>Le convoyage entre archers</h3>
+          <p>
+            Un archer qui descend au concours régional passe peut-être près de chez vous. Quand un
+            trajet existe, l’application le signale avant le paiement.
+          </p>
+        </div>
+        <div class="carte">
+          <h3>Dites ce que vous cherchez</h3>
+          <p>
+            Publiez votre recherche : les archers volontaires sur cette catégorie sont prévenus, et
+            vous l’êtes à votre tour dès qu’une annonce y répond.
+          </p>
+        </div>
+        <div class="carte">
+          <h3>Une annonce en une photo</h3>
+          <p>
+            Photographiez le matériel : titre, catégorie et caractéristiques se pré-remplissent.
+            Vous relisez, vous corrigez, vous publiez.
+          </p>
+        </div>
+      </div>
+
+      <h2>Ce que ça coûte</h2>
+      <p>
+        Publier une annonce est gratuit, sans limite de nombre, et le vendeur touche son prix
+        entier. C’est l’acheteur qui paie la protection : 0,70 € plus 5 % jusqu’à 300 €, puis 2,5 %
+        au-delà. Pour une remise en main propre vérifiée, 0,99 € quel que soit le prix. Pas
+        d’abonnement, pas d’option payante, aucune publicité.
+      </p>
+
+      <h2>Questions fréquentes</h2>
+
+      <h3>J’avais l’ancienne application, je fais quoi ?</h3>
+      <p>
+        Sur Android, la mise à jour remplace l’ancienne : rien à désinstaller. Celle-ci n’a plus
+        rien à voir — l’ancienne affichait le site web dans une coquille, celle-ci est une vraie
+        application.
+      </p>
+
+      <h3>Faut-il un compte pour regarder ?</h3>
+      <p>
+        Non. Vous pouvez parcourir les annonces librement. Le compte devient nécessaire pour
+        publier, échanger ou acheter.
+      </p>
+
+      <h3>Mes coordonnées bancaires sont-elles chez vous ?</h3>
+      <p>
+        Non. Le numéro de carte et l’IBAN sont saisis dans des formulaires fournis par Stripe et
+        vont directement chez lui : ils ne transitent pas par nos serveurs et nous ne les voyons
+        jamais. Le détail est dans la
+        <a href="confidentialite.html">politique de confidentialité</a>.
+      </p>
+
+      <h3>Un problème, une remarque ?</h3>
+      <p>
+        Écrivez à <a href="mailto:contact@archersmarket.fr">contact@archersmarket.fr</a> ou passez
+        par la page <a href="support.html">Aide</a>. Pendant la phase de test, les retours sont
+        exactement ce qu’on attend.
+      </p>
+    </main>
+
+    <footer>
+      <div class="pied">
+        <span>© 2026 Archers Market</span>
+        <a href="support.html">Aide</a>
+        <a href="confidentialite.html">Confidentialité</a>
+        <a href="cgu.html">Conditions d’utilisation</a>
+        <a href="mentions-legales.html">Mentions légales</a>
+        <a href="suppression-compte.html">Supprimer son compte</a>
+      </div>
+    </footer>
+
+    <script>
+      /*
+       * Mettre en avant le magasin de l'appareil qui consulte.
+       *
+       * Les deux boutons restent présents et cliquables : on met le bon devant,
+       * on ne cache pas l'autre. Quelqu'un qui lit sur un ordinateur pour
+       * installer ensuite sur son téléphone a besoin des deux, et une détection
+       * qui se trompe ne doit jamais aboutir à une page sans lien.
+       */
+      (function () {
+        var ua = navigator.userAgent || '';
+        var estIOS = /iPad|iPhone|iPod/.test(ua)
+          || (ua.indexOf('Macintosh') > -1 && 'ontouchend' in document);
+        var estAndroid = /Android/.test(ua);
+
+        var choisi = estIOS ? 'ios' : estAndroid ? 'android' : null;
+        if (!choisi) return;
+
+        var bouton = document.getElementById(choisi);
+        if (bouton) bouton.classList.add('recommande');
+
+        var autre = document.getElementById('autre-appareil');
+        if (autre) {
+          autre.textContent = estIOS
+            ? 'Vous êtes sur iPhone. Le lien Android est là pour le partager à quelqu’un d’autre.'
+            : 'Vous êtes sur Android. Le lien App Store est là pour le partager à quelqu’un d’autre.';
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -201,6 +201,56 @@ li {
   margin-bottom: 6px;
 }
 
+/* Fil d'Ariane des pages de guide : la même hiérarchie que le balisage
+   BreadcrumbList, pour que le lecteur voie ce que le moteur lit. */
+.fil {
+  font-size: 13px;
+  color: var(--texte-pale);
+  margin: 0 0 18px;
+}
+.fil a {
+  color: var(--texte-doux);
+}
+
+/* La réponse courte, en tête de page. Les moteurs génératifs citent le
+   premier paragraphe qui répond vraiment à la question du titre : autant
+   qu'il soit repérable, et vrai. */
+.reponse {
+  font-size: 17px;
+  color: var(--texte);
+  border-left: 3px solid var(--orange);
+  padding-left: 16px;
+  margin: 0 0 28px;
+}
+
+/* Grille de liens : une carte entière est cliquable. */
+a.carte {
+  color: inherit;
+  display: block;
+}
+a.carte:hover {
+  text-decoration: none;
+  border-color: var(--orange);
+}
+a.carte h3 {
+  color: var(--orange-dark);
+}
+
+.cta {
+  display: inline-block;
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 13px 22px;
+  border-radius: 12px;
+  margin: 8px 0;
+}
+.cta:hover {
+  background: var(--orange-dark);
+  text-decoration: none;
+}
+
 .encart {
   background: var(--orange-soft);
   border-radius: 14px;

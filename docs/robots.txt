@@ -1,0 +1,68 @@
+# Archers Market — https://archersmarket.fr
+#
+# Le site est entièrement public et n'a rien à cacher : ni espace membre, ni
+# panier, ni page de compte. Tout est ouvert, aux moteurs de recherche comme
+# aux moteurs génératifs.
+#
+# Les robots d'IA sont nommés un par un, et non pas seulement couverts par le
+# « User-agent: * ». Plusieurs d'entre eux — Google-Extended, Applebot-Extended
+# — ne lisent QUE la règle qui porte leur nom et ignorent la règle générique :
+# sans ligne dédiée, ils traitent le site comme non autorisé. Les citer est la
+# seule façon de dire oui.
+#
+# Rien n'est interdit ici. La seule page qu'on ne veut pas voir indexée,
+# `retour-paiement.html`, porte un `noindex` dans son en-tête : c'est l'outil
+# juste. Un « Disallow » empêche de lire la page, pas de l'indexer — une page
+# interdite au robot mais pointée par un lien finit dans l'index sans que
+# personne ait pu lire le `noindex` qu'elle contient.
+
+User-agent: *
+Allow: /
+
+# Moteurs de recherche génératifs et assistants
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: MistralAI-User
+Allow: /
+
+Sitemap: https://archersmarket.fr/sitemap.xml

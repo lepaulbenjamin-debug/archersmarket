@@ -3,19 +3,129 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Archers Market — Le marché d’occasion entre archers</title>
+    <title>Archers Market — Matériel de tir à l’arc d’occasion, entre archers</title>
     <meta
       name="description"
-      content="Achetez et vendez du matériel de tir à l’arc d’occasion entre archers. Gratuit, sans commission."
+      content="Achetez et vendez du matériel de tir à l’arc d’occasion entre archers : arcs, branches, poignées, viseurs, flèches. Paiement protégé, envoi adapté aux arcs longs, application gratuite."
     />
+    <link rel="canonical" href="https://archersmarket.fr/" />
     <link rel="icon" href="emblem.png" />
     <link rel="stylesheet" href="style.css" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Archers Market" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:title" content="Archers Market — le marché d’occasion entre archers" />
+    <meta
+      property="og:description"
+      content="Arcs, branches, poignées, viseurs, flèches d’occasion. Paiement protégé, envoi accompagné, convoyage entre archers."
+    />
+    <meta property="og:url" content="https://archersmarket.fr/" />
+    <meta property="og:image" content="https://archersmarket.fr/partage.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!--
+      L'identité de la marque, donnée une fois, ici, et reliée aux deux fiches
+      de magasin. C'est ce qui permet à un moteur — classique ou génératif — de
+      savoir que « Archers Market », l'application iPhone et l'application
+      Android sont une seule et même chose.
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://archersmarket.fr/#organisation",
+            "name": "Archers Market",
+            "url": "https://archersmarket.fr/",
+            "logo": "https://archersmarket.fr/emblem.png",
+            "image": "https://archersmarket.fr/partage.png",
+            "slogan": "Le marché d’occasion entre archers",
+            "description": "Place de marché française du matériel de tir à l’arc d’occasion entre particuliers.",
+            "email": "contact@archersmarket.fr",
+            "areaServed": { "@type": "Country", "name": "France" },
+            "knowsLanguage": "fr",
+            "sameAs": [
+              "https://apps.apple.com/fr/app/id6448762227",
+              "https://play.google.com/store/apps/details?id=app.archersmarket.android"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://archersmarket.fr/#site",
+            "url": "https://archersmarket.fr/",
+            "name": "Archers Market",
+            "inLanguage": "fr-FR",
+            "publisher": { "@id": "https://archersmarket.fr/#organisation" }
+          },
+          {
+            "@type": "MobileApplication",
+            "name": "Archers Market",
+            "applicationCategory": "ShoppingApplication",
+            "operatingSystem": "iOS, Android",
+            "inLanguage": "fr-FR",
+            "description": "Application d’achat et de vente de matériel de tir à l’arc d’occasion entre archers : arcs classiques et à poulies, branches, poignées, viseurs, flèches. Paiement conservé jusqu’à réception, expédition adaptée aux colis longs.",
+            "url": "https://archersmarket.fr/installer.html",
+            "installUrl": "https://archersmarket.fr/installer.html",
+            "downloadUrl": "https://archersmarket.fr/installer.html",
+            "publisher": { "@id": "https://archersmarket.fr/#organisation" },
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "EUR",
+              "description": "Application et publication d’annonces gratuites. Le vendeur touche l’intégralité de son prix de vente ; les frais de protection du paiement sont à la charge de l’acheteur."
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Qu’est-ce qu’Archers Market ?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Archers Market est une application française d’achat et de vente de matériel de tir à l’arc d’occasion entre particuliers. On y trouve des arcs classiques et à poulies, des branches, des poignées, des viseurs, de la stabilisation, des flèches et des accessoires, décrits avec les caractéristiques propres à l’archerie : puissance, longueur d’arc, allonge, spine et main d’arc. L’application est gratuite, sur iPhone et Android."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Combien coûte la vente sur Archers Market ?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Rien pour le vendeur. Publier une annonce est gratuit et sans limite de nombre, et le vendeur touche l’intégralité de son prix de vente : aucune commission n’est prélevée sur les ventes. C’est l’acheteur qui paie la protection du paiement, 0,70 € plus 5 % du prix jusqu’à 300 € puis 2,5 % au-delà, ou un forfait de 0,99 € pour une remise en main propre vérifiée. Il n’y a ni abonnement ni option payante."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Comment le paiement est-il protégé ?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "L’acheteur règle à la commande, mais la somme n’est pas versée au vendeur tout de suite : elle est conservée jusqu’à ce que l’acheteur confirme avoir reçu le matériel, ou quatorze jours après l’expédition. Si le colis n’arrive jamais, ou si le matériel ne correspond pas à l’annonce, l’acheteur est remboursé. Les paiements sont opérés par Stripe."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Comment expédier un arc acheté sur Archers Market ?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "L’application compare les transporteurs qui acceptent réellement les dimensions du colis — un point qui compte, car un arc classique monté mesure jusqu’à 1,78 m — affiche le tarif, édite l’étiquette et assure l’envoi à sa valeur déclarée, en point relais ou à domicile. Quand un archer fait déjà le trajet entre la ville du vendeur et celle de l’acheteur, l’application le signale et la remise peut se faire en main propre."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <header class="bandeau">
       <div class="bandeau-inner">
         <a class="marque" href="/"><img src="emblem.png" alt="" />Archers Market</a>
         <nav>
+          <a href="materiel-occasion.html">Matériel d’occasion</a>
           <a href="installer.html">Installer</a>
           <a href="support.html">Aide</a>
           <a href="confidentialite.html">Confidentialité</a>
@@ -29,7 +139,7 @@
       <h1>Le marché d’occasion entre archers</h1>
       <p>
         Branches, poignées, viseurs, flèches, stabilisation : achetez et vendez votre matériel de
-        tir à l’arc entre passionnés. Gratuit, sans commission.
+        tir à l’arc entre passionnés. Publier est gratuit, et le vendeur touche son prix entier.
       </p>
     </section>
 
@@ -39,29 +149,94 @@
           <h3>Du matériel décrit par des archers</h3>
           <p>
             Puissance, longueur, allonge, spine, main d’arc : les caractéristiques qui comptent
-            vraiment, renseignées dès l’annonce.
+            vraiment, renseignées dès l’annonce — et filtrables à la recherche.
           </p>
         </div>
         <div class="carte">
-          <h3>On se parle avant d’acheter</h3>
+          <h3>Votre argent ne part pas dans le vide</h3>
           <p>
-            Messagerie intégrée, offres de prix, questions sur l’état du matériel. Aucune commission
-            n’est prélevée sur vos ventes.
+            La somme est conservée jusqu’à ce que vous confirmiez avoir reçu le matériel. Si le
+            colis n’arrive pas, vous êtes remboursé.
+          </p>
+        </div>
+        <div class="carte">
+          <h3>Un envoi qui tient compte de la longueur</h3>
+          <p>
+            Un arc de 70 pouces fait 1,78 m. On compare les transporteurs qui acceptent ce
+            colis-là, on édite l’étiquette et on assure la valeur déclarée.
+          </p>
+        </div>
+        <div class="carte">
+          <h3>Le convoyage entre archers</h3>
+          <p>
+            Quand un archer fait déjà le trajet entre la ville du vendeur et la vôtre, l’application
+            vous le signale. Remise en main propre, transport quasi gratuit.
+          </p>
+        </div>
+        <div class="carte">
+          <h3>Dites ce que vous cherchez</h3>
+          <p>
+            Publiez votre recherche : les archers qui vendent cette catégorie sont prévenus. C’est
+            souvent comme ça qu’une poignée sort d’un placard.
           </p>
         </div>
         <div class="carte">
           <h3>La confiance se construit</h3>
           <p>
-            Après chaque vente conclue, acheteur et vendeur se notent. Signalement et blocage
-            disponibles à tout moment.
+            Chaque membre a un profil : sa ville, son club, sa discipline, et les avis laissés après
+            ses ventes. On sait à qui on parle.
           </p>
         </div>
       </div>
 
+      <h2>Le matériel d’occasion, expliqué</h2>
+
+      <p>
+        En tir à l’arc, l’occasion est le marché normal : on change de branches en montant en
+        puissance, on revend sa poignée pour financer la suivante, et le matériel sort peu usé.
+        Encore faut-il savoir ce qui se vérifie et ce qui est compatible.
+      </p>
+
+      <div class="cartes">
+        <a class="carte" href="materiel-occasion.html">
+          <h3>Le panorama complet</h3>
+          <p>
+            Ce qui se vend d’occasion, ce qui garde sa valeur, et les quatre questions à poser avant
+            d’acheter.
+          </p>
+        </a>
+        <a class="carte" href="arc-classique-occasion.html">
+          <h3>Arc classique</h3>
+          <p>ILF ou Formula, longueur d’arc, puissance réelle à votre allonge.</p>
+        </a>
+        <a class="carte" href="arc-a-poulies-occasion.html">
+          <h3>Arc à poulies</h3>
+          <p>L’allonge, la plage de puissance et l’état des cordes.</p>
+        </a>
+        <a class="carte" href="fleches-occasion.html">
+          <h3>Flèches et tubes</h3>
+          <p>Le spine, la coupe irréversible, le contrôle de sécurité du carbone.</p>
+        </a>
+        <a class="carte" href="prix-materiel-occasion.html">
+          <h3>Combien ça vaut</h3>
+          <p>La décote réelle par famille de matériel, et comment fixer un prix qui part.</p>
+        </a>
+        <a class="carte" href="vendre-son-materiel.html">
+          <h3>Vendre son matériel</h3>
+          <p>L’annonce qui part, les photos utiles, l’expédition d’un arc.</p>
+        </a>
+      </div>
+
       <h2>L’application</h2>
       <p>
-        Archers Market est une application mobile pour iPhone et Android. Le compte est gratuit et
-        se supprime à tout moment depuis l’application, avec toutes les données qui vont avec.
+        Archers Market est une application mobile gratuite pour iPhone et Android. Le compte est
+        gratuit et se supprime à tout moment depuis l’application, avec toutes les données qui vont
+        avec. Aucune publicité, aucun traceur, aucune position GPS : la ville est celle que vous
+        saisissez.
+      </p>
+
+      <p>
+        <a class="cta" href="installer.html">Installer l’application</a>
       </p>
 
       <div class="encart">
@@ -76,6 +251,7 @@
     <footer>
       <div class="pied">
         <span>© 2026 Archers Market</span>
+        <a href="materiel-occasion.html">Matériel d’occasion</a>
         <a href="support.html">Aide</a>
         <a href="confidentialite.html">Confidentialité</a>
         <a href="cgu.html">Conditions d’utilisation</a>

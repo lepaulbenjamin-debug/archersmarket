@@ -1,6 +1,6 @@
-import { LISTING_SELECT, toListing, type ListingRow } from '@/services/mappers';
+import { LISTING_SELECT, publicPhotoUrl, toListing, type ListingRow } from '@/services/mappers';
 import { uploadListingPhoto } from '@/services/photos';
-import { fail, supabase } from '@/services/supabase';
+import { LISTING_PHOTOS_BUCKET, fail, supabase } from '@/services/supabase';
 import type { Listing, ListingFilters, ListingStatus, NewListingInput } from '@/types';
 
 const matchesQuery = (listing: Listing, query: string) => {
@@ -122,6 +122,113 @@ export async function createListing(
   }
 
   return toListing(listing);
+}
+
+/**
+ * Modifie une annonce publiée.
+ *
+ * Le statut n'est jamais envoyé, et ce n'est pas un oubli : le déclencheur
+ * `listings_notify_wanted` porte sur `update of status`, et Postgres le
+ * déclenche dès que la colonne figure dans la requête — même réécrite à
+ * l'identique. L'inclure préviendrait les chercheurs à chaque correction de
+ * faute de frappe.
+ */
+export async function updateListing(
+  listingId: string,
+  input: NewListingInput,
+  sellerId: string,
+): Promise<Listing> {
+  const { photos = [], ...fields } = input;
+
+  const { error } = await supabase
+    .from('listings')
+    .update({
+      title: fields.title,
+      description: fields.description,
+      price: fields.price,
+      category: fields.category,
+      brand: fields.brand,
+      condition: fields.condition,
+      hand: fields.handedness,
+      draw_weight: fields.drawWeight ?? null,
+      bow_length: fields.bowLength ?? null,
+      draw_length: fields.drawLength ?? null,
+      spine: fields.spine ?? null,
+      size: fields.size ?? null,
+      city: fields.city,
+      shipping: fields.shipping,
+      shipping_price: fields.shippingPrice ?? null,
+      parcel_size: fields.parcelSize ?? null,
+    })
+    .eq('id', listingId);
+  if (error) fail(error, 'Enregistrement de l’annonce impossible.');
+
+  await reconcilePhotos(listingId, sellerId, photos);
+
+  const { data, error: relecture } = await supabase
+    .from('listings')
+    .select(LISTING_SELECT)
+    .eq('id', listingId)
+    .single();
+  if (relecture || !data) fail(relecture, 'Relecture de l’annonce impossible.');
+  return toListing(data as ListingRow);
+}
+
+/**
+ * Aligne les photos stockées sur celles que le vendeur a laissées.
+ *
+ * Le formulaire rend un mélange : des URL publiques pour les photos déjà en
+ * ligne, des URI locales pour celles qu'on vient d'ajouter. On retrouve le
+ * chemin de stockage des premières, on envoie les secondes, puis on réécrit
+ * l'ordre — et on efface du stockage ce que plus aucune ligne ne référence,
+ * faute de quoi chaque modification laisserait un fichier derrière elle.
+ */
+async function reconcilePhotos(
+  listingId: string,
+  sellerId: string,
+  photos: string[],
+): Promise<void> {
+  const { data: existantes, error } = await supabase
+    .from('listing_images')
+    .select('path, position')
+    .eq('listing_id', listingId);
+  if (error) fail(error, 'Lecture des photos impossible.');
+
+  const parUrl = new Map<string, string>();
+  for (const { path } of (existantes ?? []) as Array<{ path: string }>) {
+    parUrl.set(publicPhotoUrl(path), path);
+  }
+
+  // Un nom de fichier neuf par envoi : réutiliser l'index écraserait une photo
+  // conservée qui porte déjà ce numéro.
+  const horodatage = Date.now();
+  const chemins: string[] = [];
+  for (const [index, photo] of photos.entries()) {
+    const connue = parUrl.get(photo);
+    chemins.push(
+      connue ?? (await uploadListingPhoto(photo, sellerId, listingId, horodatage + index)),
+    );
+  }
+
+  const { error: purge } = await supabase
+    .from('listing_images')
+    .delete()
+    .eq('listing_id', listingId);
+  if (purge) fail(purge, 'Mise à jour des photos impossible.');
+
+  if (chemins.length) {
+    const { error: insertion } = await supabase
+      .from('listing_images')
+      .insert(chemins.map((path, position) => ({ listing_id: listingId, path, position })));
+    if (insertion) fail(insertion, 'Enregistrement des photos impossible.');
+  }
+
+  const orphelines = [...parUrl.values()].filter((path) => !chemins.includes(path));
+  if (orphelines.length) {
+    // Un fichier oublié dans le stockage ne casse rien : on ne fait pas échouer
+    // une modification réussie pour ça.
+    await supabase.storage.from(LISTING_PHOTOS_BUCKET).remove(orphelines);
+  }
 }
 
 export async function updateListingStatus(

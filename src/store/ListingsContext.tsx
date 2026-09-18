@@ -38,6 +38,7 @@ interface ListingsValue {
   isFavorite: (id: string) => boolean;
   toggleFavorite: (id: string) => Promise<void>;
   createListing: (input: NewListingInput) => Promise<Listing>;
+  updateListing: (id: string, input: NewListingInput) => Promise<Listing>;
   setStatus: (id: string, status: ListingStatus, buyerId?: string | null) => Promise<void>;
   removeListing: (id: string) => Promise<void>;
   registerView: (id: string) => Promise<void>;
@@ -156,6 +157,16 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
     [user],
   );
 
+  const updateListing = useCallback(
+    async (id: string, input: NewListingInput) => {
+      if (!user) throw new Error('Connectez-vous pour modifier une annonce.');
+      const listing = await listingsService.updateListing(id, input, user.id);
+      setListings((prev) => prev.map((l) => (l.id === id ? listing : l)));
+      return listing;
+    },
+    [user],
+  );
+
   const setStatus = useCallback(
     async (id: string, status: ListingStatus, buyerId?: string | null) => {
     const updated = await listingsService.updateListingStatus(id, status, buyerId);
@@ -188,6 +199,7 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
       isFavorite,
       toggleFavorite,
       createListing,
+      updateListing,
       setStatus,
       removeListing,
       registerView,
@@ -208,6 +220,7 @@ export function ListingsProvider({ children }: { children: React.ReactNode }) {
       search,
       setStatus,
       toggleFavorite,
+      updateListing,
     ],
   );
 

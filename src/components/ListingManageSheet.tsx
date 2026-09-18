@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -51,6 +52,7 @@ const ETATS: Record<ListingStatus, { label: string; hint: string; couleur: strin
  * qu'on venait de quitter. Gérer une annonce se fait là où on la regarde.
  */
 export function ListingManageSheet({ visible, listing, onClose, onSold, onDeleted }: Props) {
+  const router = useRouter();
   const { setStatus, removeListing } = useListings();
   const [designeAcheteur, setDesigneAcheteur] = useState(false);
   const [enCours, setEnCours] = useState(false);
@@ -146,6 +148,21 @@ export function ListingManageSheet({ visible, listing, onClose, onSold, onDelete
                 <Chiffre valeur={listing.favoritesCount.toString()} label="en favori" />
               </View>
 
+              {/*
+                Une annonce vendue ne se modifie plus : l'acheteur a acheté ce
+                qui y était décrit. La base le refuse aussi, et dit pourquoi.
+              */}
+              {listing.status === 'sold' ? null : (
+                <Button
+                  label="Modifier l’annonce"
+                  icon="pencil-outline"
+                  onPress={() => {
+                    onClose();
+                    router.push(`/listing/edit/${listing.id}`);
+                  }}
+                />
+              )}
+
               {listing.status === 'active' ? (
                 <Button
                   label="Marquer réservée"
@@ -161,6 +178,7 @@ export function ListingManageSheet({ visible, listing, onClose, onSold, onDelete
                   <Button
                     label="Marquer vendue"
                     icon="check-circle-outline"
+                    variant="secondary"
                     loading={enCours}
                     onPress={() => setDesigneAcheteur(true)}
                   />

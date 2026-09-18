@@ -18,6 +18,7 @@ import { BuyButton } from '@/components/BuyButton';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { ListingCard } from '@/components/ListingCard';
+import { ListingManageSheet } from '@/components/ListingManageSheet';
 import { Rating } from '@/components/Rating';
 import { ReportSheet } from '@/components/ReportSheet';
 import { Screen } from '@/components/Screen';
@@ -42,6 +43,7 @@ export default function ListingScreen() {
   const { openConversation } = useMessages();
   const [imageIndex, setImageIndex] = useState(0);
   const [reporting, setReporting] = useState(false);
+  const [managing, setManaging] = useState(false);
   const [convoyeurs, setConvoyeurs] = useState(0);
   const viewed = useRef(false);
 
@@ -343,6 +345,14 @@ export default function ListingScreen() {
         subject={listing.title}
       />
 
+      <ListingManageSheet
+        visible={managing}
+        listing={listing}
+        onClose={() => setManaging(false)}
+        // L'annonce supprimée, l'écran qui la montre n'a plus rien à montrer.
+        onDeleted={() => router.back()}
+      />
+
       <SafeAreaView edges={['bottom']} style={styles.footer}>
         <View style={styles.footerInner}>
           <View style={styles.footerPrice}>
@@ -353,7 +363,7 @@ export default function ListingScreen() {
             <Button
               label="Gérer mon annonce"
               icon="cog-outline"
-              onPress={() => router.push('/(tabs)/profile')}
+              onPress={() => setManaging(true)}
               style={styles.footerButton}
             />
           ) : (

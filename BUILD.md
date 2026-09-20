@@ -413,6 +413,27 @@ partie** :
 | iOS build 11, en ligne sur l'App Store | `55cf9a8` |
 | iOS build 12 et suivants, première version Android | après le nettoyage des permissions |
 
+**Rien n'a touché la couche native depuis `31991a2`**, le commit du nettoyage
+des permissions. Mesure faite le 20 septembre 2026 : l'empreinte de `31991a2`
+et celle de la tête de branche sont identiques, sur les deux plateformes. Tout
+ce qui a été ajouté depuis — la feuille de gestion d'annonce, l'édition d'une
+annonce publiée — est du JavaScript, donc livrable par `eas update` sans
+repasser par les magasins.
+
+Une mise en garde sur la façon de refaire cette mesure : comparer deux commits
+dans un arbre de travail séparé dont le `node_modules` est un lien symbolique
+**ne marche pas**. Les configurations d'autolinking embarquent les chemins des
+modules, le lien les réécrit, et les deux empreintes diffèrent alors sans
+qu'aucun code natif ait bougé. Il faut mesurer dans le dépôt principal, en
+faisant un aller-retour par `git checkout` :
+
+```bash
+npx expo-updates fingerprint:generate --platform ios
+git checkout 31991a2
+npx expo-updates fingerprint:generate --platform ios
+git checkout -
+```
+
 Pour corriger quelque chose sur le build 11 sans repasser par Apple, il faut
 publier depuis ce commit-là :
 

@@ -1,5 +1,12 @@
 -- Modifier une annonce publiée : ce que la base doit refuser.
 --
+-- Appliquée en production le 20 septembre 2026. Vérifié à cette occasion, dans
+-- une transaction annulée : une annonce vendue refuse toute modification de
+-- fond, et accepte toujours d'être remise en ligne. La garde sur les comptes
+-- suspendus n'a pas été vue mordre — elle s'appuie sur `auth.uid()`, nul dans
+-- l'éditeur SQL — mais elle réemploie telle quelle la fonction en service sur
+-- l'insertion depuis la migration 0023.
+--
 -- L'application ouvre l'édition à l'auteur d'une annonce non vendue. Le
 -- contrôle vit ici parce que le cacher dans l'application reviendrait à ne
 -- pas le faire : l'API reste ouverte, et une requête écrite à la main ne

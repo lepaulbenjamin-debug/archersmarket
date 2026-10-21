@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Onboarding } from '@/components/Onboarding';
 import { PaymentProvider } from '@/components/PaymentProvider';
+import { SiteHeader } from '@/components/SiteHeader';
 import { WhatsNew } from '@/components/WhatsNew';
 import { NOUVEAUTES } from '@/data/whatsNew';
 import {
@@ -70,6 +71,8 @@ function RootNavigator() {
 
   return (
     <View style={styles.root}>
+      {/* Navigation du site sur écran d'ordinateur ; rien sur téléphone. */}
+      <SiteHeader />
       <Stack
         screenOptions={{
           headerShown: false,

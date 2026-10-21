@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { FlatList, StyleSheet, View, ViewStyle } from 'react-native';
+import { FlatList, Platform, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { ListingCard } from '@/components/ListingCard';
 import { spacing } from '@/theme';
+import { SITE_LARGE, useContentWidth } from '@/utils/site';
 import type { Listing } from '@/types';
 
 interface Props {
@@ -16,7 +17,20 @@ interface Props {
 }
 
 /**
- * Grille à deux colonnes. Les emplacements manquants de la dernière ligne sont
+ * Combien de colonnes pour cette largeur.
+ *
+ * Sur téléphone, toujours deux : c'est la grille de l'application, et elle ne
+ * change pas. Sur le site, une carte doit garder la taille qu'elle a dans la
+ * main — autour de 220 px — plutôt que de s'étirer à 600 px sur un écran
+ * d'ordinateur, où l'on verrait deux annonces à la fois.
+ */
+function colonnesPour(largeur: number): number {
+  if (Platform.OS !== 'web') return 2;
+  return Math.max(2, Math.min(5, Math.floor(largeur / 220)));
+}
+
+/**
+ * Grille d'annonces. Les emplacements manquants de la dernière ligne sont
  * comblés par des cases vides, sinon une tuile seule s'étire sur toute la largeur.
  */
 export function ListingGrid({
@@ -28,10 +42,11 @@ export function ListingGrid({
   scrollEnabled = true,
   contentContainerStyle,
 }: Props) {
-  const data = useMemo<Array<Listing | null>>(
-    () => (listings.length % 2 === 0 ? listings : [...listings, null]),
-    [listings],
-  );
+  const colonnes = colonnesPour(useContentWidth(SITE_LARGE));
+  const data = useMemo<Array<Listing | null>>(() => {
+    const manquants = (colonnes - (listings.length % colonnes)) % colonnes;
+    return manquants ? [...listings, ...Array<null>(manquants).fill(null)] : listings;
+  }, [listings, colonnes]);
 
   // Rendu direct plutôt que ListEmptyComponent : avec numColumns, la FlatList
   // n'affiche pas son composant de liste vide.
@@ -46,9 +61,12 @@ export function ListingGrid({
 
   return (
     <FlatList
+      // Une FlatList ne sait pas changer de nombre de colonnes en place : on
+      // la remonte quand la fenêtre change de palier.
+      key={colonnes}
       data={data}
       keyExtractor={(item, index) => item?.id ?? `spacer-${index}`}
-      numColumns={2}
+      numColumns={colonnes}
       scrollEnabled={scrollEnabled}
       columnWrapperStyle={styles.row}
       contentContainerStyle={[styles.content, contentContainerStyle]}

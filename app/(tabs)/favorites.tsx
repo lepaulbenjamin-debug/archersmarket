@@ -13,7 +13,7 @@ export default function FavoritesScreen() {
   const { favoriteListings, isFavorite, toggleFavorite } = useListings();
 
   return (
-    <Screen>
+    <Screen wide>
       <Header
         title="Favoris"
         subtitle={user ? `${favoriteListings.length} annonce(s) enregistrée(s)` : undefined}

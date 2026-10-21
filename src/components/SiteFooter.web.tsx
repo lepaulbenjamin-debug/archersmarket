@@ -30,6 +30,19 @@ const GUIDES: Array<[string, string]> = [
   ['Expédier un arc', '/expedier-un-arc.html'],
 ];
 
+// Les grandes catégories, à leurs adresses de page : un lien depuis chaque
+// grille du site leur donne du poids auprès des moteurs.
+const CATEGORIES: Array<[string, string]> = [
+  ['Arcs classiques', '/categorie/arc-classique'],
+  ['Poignées', '/categorie/poignees'],
+  ['Branches', '/categorie/branches'],
+  ['Arcs à poulies', '/categorie/arc-a-poulies'],
+  ['Arcs traditionnels', '/categorie/arc-traditionnel'],
+  ['Flèches et tubes', '/categorie/fleches'],
+  ['Viseurs', '/categorie/viseurs'],
+  ['Stabilisation', '/categorie/stabilisation'],
+];
+
 const SITE: Array<[string, string]> = [
   ['À propos', '/a-propos.html'],
   ['Installer l’application', '/installer.html'],
@@ -102,6 +115,7 @@ export function SiteFooter() {
             </a>
           </p>
         </div>
+        <Colonne titre="Par catégorie" liens={CATEGORIES} />
         <Colonne titre="Guides" liens={GUIDES} />
         <Colonne titre="Le site" liens={SITE} />
       </div>

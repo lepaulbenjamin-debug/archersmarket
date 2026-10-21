@@ -39,6 +39,9 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* Le fil filtré sur une catégorie, à sa propre adresse. Pas d'onglet à
+          lui : c'est l'onglet Rechercher, vu par une autre porte. */}
+      <Tabs.Screen name="categorie/[slug]" options={{ href: null }} />
       <Tabs.Screen
         name="favorites"
         options={{

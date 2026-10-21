@@ -62,6 +62,14 @@ jobs:
 
       - run: node scripts/site/construire.mjs dist docs site
 
+      # Les adresses nouvelles ou modifiées depuis la publication précédente,
+      # à signaler aux moteurs une fois le site en ligne. Hors du site publié.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a-signaler
+          path: site.a-signaler.json
+          retention-days: 1
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
@@ -75,3 +83,18 @@ jobs:
     steps:
       - id: publication
         uses: actions/deploy-pages@v4
+
+  # Après la publication seulement : le moteur vérifie la clé en lisant un
+  # fichier du site, qui doit donc déjà être en ligne. Un échec ici ne touche
+  # pas au site publié.
+  signaler:
+    needs: publier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: a-signaler
+
+      - run: node scripts/site/signaler.mjs site.a-signaler.json

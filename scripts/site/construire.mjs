@@ -28,6 +28,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+
 const SITE = 'https://archersmarket.fr';
 const [exportWeb, docs, sortie] = process.argv.slice(2);
 if (!exportWeb || !docs || !sortie) {
@@ -35,6 +36,13 @@ if (!exportWeb || !docs || !sortie) {
   process.exit(2);
 }
 const racineProjet = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+
+// Le texte des pages de catégorie, partagé avec l'application : elle l'affiche
+// en tête de ces pages sur le web, pour que le moteur qui exécute la page y
+// trouve le même titre et le même texte que dans le HTML.
+const { _: _note, ...RUBRIQUES } = JSON.parse(
+  fs.readFileSync(path.join(racineProjet, 'src/data/rubriques.json'), 'utf8'),
+);
 
 // ---------------------------------------------------------------------------
 // Configuration publique
@@ -72,7 +80,7 @@ function libellesDe(nomTableau, attendus) {
   const fin = source.indexOf('];', debut);
   const bloc = source.slice(debut, fin);
   const libelles = {};
-  for (const m of bloc.matchAll(/id: '([^']+)',\s*label: '((?:[^'\\]|\\.)*)'/g)) {
+  for (const m of bloc.matchAll(/id: '([^']+)',(?:\s*slug: '[^']+',)?\s*label: '((?:[^'\\]|\\.)*)'/g)) {
     libelles[m[1]] = m[2].replace(/\\'/g, "'");
   }
   // Un catalogue mal lu donnerait des pages avec « undefined » en titre de
@@ -83,6 +91,36 @@ function libellesDe(nomTableau, attendus) {
   return libelles;
 }
 const CATEGORIES = libellesDe('categories', 17);
+
+/** L'adresse de chaque catégorie sur le site, lue dans le même catalogue. */
+function adressesDesCategories() {
+  const source = fs.readFileSync(path.join(racineProjet, 'src/data/catalog.ts'), 'utf8');
+  const adresses = {};
+  for (const m of source.matchAll(/id: '([^']+)', slug: '([^']+)'/g)) adresses[m[1]] = m[2];
+  for (const id of Object.keys(CATEGORIES)) {
+    if (!adresses[id]) throw new Error(`Catalogue : la catégorie ${id} n'a pas d'adresse (slug).`);
+    if (!RUBRIQUES[id]) throw new Error(`rubriques.mjs : la catégorie ${id} n'a pas de texte.`);
+  }
+  return adresses;
+}
+const ADRESSES = adressesDesCategories();
+const urlCategorie = (id) => `${SITE}/categorie/${ADRESSES[id]}`;
+
+// Les guides de docs/ et le pied de page de l'application pointent vers des
+// pages de catégorie écrites à la main. Une adresse mal tapée publierait un
+// lien mort : la construction échoue plutôt.
+{
+  const connues = new Set(Object.values(ADRESSES));
+  const sources = [
+    ...fs.readdirSync(docs).filter((f) => f.endsWith('.html')).map((f) => path.join(docs, f)),
+    path.join(racineProjet, 'src/components/SiteFooter.web.tsx'),
+  ];
+  for (const fichier of sources) {
+    for (const m of fs.readFileSync(fichier, 'utf8').matchAll(/\/categorie\/([a-z0-9-]+)/g)) {
+      if (!connues.has(m[1])) throw new Error(`${path.basename(fichier)} : lien vers une catégorie inconnue, /categorie/${m[1]}.`);
+    }
+  }
+}
 const ETATS = libellesDe('conditions', 5);
 const MAINS = libellesDe('handednessOptions', 3);
 
@@ -242,6 +280,18 @@ function ecrire(relatif, contenu) {
 
 const annonces = await lireAnnonces();
 
+const parCategorie = {};
+for (const a of annonces) (parCategorie[a.category] ??= []).push(a);
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+const categoriesPeuplees = Object.keys(CATEGORIES).filter((id) => parCategorie[id]?.length);
+
+const lienCategories = (sauf) =>
+  categoriesPeuplees
+    .filter((id) => id !== sauf)
+    .map((id) => `<li><a href="${html(urlCategorie(id))}">${html(RUBRIQUES[id].titre)}</a> (${parCategorie[id].length})</li>`)
+    .join('');
+
+
 fs.rmSync(sortie, { recursive: true, force: true });
 fs.mkdirSync(sortie, { recursive: true });
 
@@ -307,9 +357,25 @@ ecrire(
         },
       ],
     },
-    contenu: `${enteteSite}<main style="max-width:760px;margin:0 auto;padding:24px 20px"><h1>Le marché d’occasion entre archers</h1><p>Achetez et vendez votre matériel de tir à l’arc d’occasion entre passionnés. Publier est gratuit, et le vendeur touche son prix entier.</p><h2>Dernières annonces</h2><ul style="padding-left:20px">${listeAccueil}</ul><p><a href="/materiel-occasion.html">Guides du matériel d’occasion</a> · <a href="/a-propos.html">À propos</a> · <a href="/mentions-legales.html">Mentions légales</a></p></main>`,
+    contenu: `${enteteSite}<main style="max-width:760px;margin:0 auto;padding:24px 20px"><h1>Le marché d’occasion entre archers</h1><p>Achetez et vendez votre matériel de tir à l’arc d’occasion entre passionnés. Publier est gratuit, et le vendeur touche son prix entier.</p><h2>Par catégorie</h2><ul>${lienCategories()}</ul><h2>Dernières annonces</h2><ul style="padding-left:20px">${listeAccueil}</ul><p><a href="/materiel-occasion.html">Guides du matériel d’occasion</a> · <a href="/a-propos.html">À propos</a> · <a href="/mentions-legales.html">Mentions légales</a></p></main>`,
   }),
 );
+
+/**
+ * Les autres annonces de la même catégorie, en liens.
+ *
+ * C'est le chemin qu'un robot suit d'une fiche à l'autre. Sans lui, une
+ * annonce n'est reliée qu'à l'accueil, qui ne liste que les plus récentes :
+ * les plus anciennes finiraient orphelines, découvertes par le seul sitemap.
+ */
+function voisines(a) {
+  const autres = annonces.filter((x) => x.category === a.category && x.id !== a.id).slice(0, 8);
+  const categorie = CATEGORIES[a.category] ?? 'Matériel';
+  const liens = autres
+    .map((x) => `<li><a href="/listing/${x.id}">${html(x.title)}</a> — ${html(prix(x.price))}</li>`)
+    .join('');
+  return `<h2>${html(categorie)} : les autres annonces</h2>${liens ? `<ul>${liens}</ul>` : ''}<p><a href="${html(urlCategorie(a.category))}">Voir toutes les annonces : ${html(RUBRIQUES[a.category].titre)}</a></p>`;
+}
 
 // --- Une page par annonce -----------------------------------------------------
 
@@ -329,7 +395,7 @@ for (const a of annonces) {
   const image = a.photos[0];
 
   const contenu = `${enteteSite}<main style="max-width:760px;margin:0 auto;padding:24px 20px">
-<nav style="font-size:13px;color:#909095"><a href="/">Annonces</a> → <a href="/?category=${html(a.category)}">${html(categorie)}</a></nav>
+<nav style="font-size:13px;color:#909095"><a href="/">Annonces</a> → <a href="${html(urlCategorie(a.category))}">${html(categorie)}</a></nav>
 <h1 style="margin:8px 0">${html(a.title)}</h1>
 <p style="font-size:24px;font-weight:800;color:#DF6F27;margin:0 0 12px">${html(prix(a.price))}</p>
 ${image ? `<img src="${html(image)}" alt="${html(a.title)}" width="720" style="max-width:100%;height:auto;border-radius:12px" />` : ''}
@@ -338,6 +404,7 @@ ${image ? `<img src="${html(image)}" alt="${html(a.title)}" width="720" style="m
 <h2>Caractéristiques</h2>
 <table>${lignes}</table>
 <p>À ${html(a.city)}. Paiement protégé jusqu’à la réception, ou remise en main propre.</p>
+${voisines(a)}
 <p><a href="/installer.html">Installer l’application Archers Market</a></p>
 </main>`;
 
@@ -366,8 +433,7 @@ ${image ? `<img src="${html(image)}" alt="${html(a.title)}" width="720" style="m
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Annonces', item: `${SITE}/` },
-          // Le fil filtré sur la catégorie : l'accueil lit `?category=` au démarrage.
-          { '@type': 'ListItem', position: 2, name: categorie, item: `${SITE}/?category=${a.category}` },
+          { '@type': 'ListItem', position: 2, name: categorie, item: urlCategorie(a.category) },
           { '@type': 'ListItem', position: 3, name: a.title, item: url },
         ],
       },
@@ -388,6 +454,94 @@ ${image ? `<img src="${html(image)}" alt="${html(a.title)}" width="720" style="m
         `<meta property="product:price:amount" content="${Number(a.price).toFixed(2)}" />`,
         '<meta property="product:price:currency" content="EUR" />',
       ].join('\n    '),
+    }),
+  );
+}
+
+// --- Une page par catégorie ------------------------------------------------------
+
+// Ce qui fait leboncoin dans les résultats de recherche, ce n'est pas
+// seulement la page de chaque annonce : c'est la page « branches d'arc
+// d'occasion », qui répond à la recherche que tout le monde tape. Chaque
+// catégorie a donc sa page, son titre, son texte et sa liste d'annonces.
+//
+// Une catégorie vide est générée — son adresse doit répondre — mais marquée
+// `noindex` et laissée hors du sitemap : une page sans annonce est du contenu
+// creux, et un site qui en publie se fait déclasser. Elle redevient
+// indexable dès sa première annonce, à la construction suivante.
+
+for (const id of Object.keys(CATEGORIES)) {
+  const rubrique = RUBRIQUES[id];
+  const liste = parCategorie[id] ?? [];
+  const n = liste.length;
+  const url = urlCategorie(id);
+
+  const titre = n
+    ? `${rubrique.titre} — ${pluriel(n, 'annonce')} entre archers — Archers Market`
+    : `${rubrique.titre} — Archers Market`;
+  const description = resume(
+    `${rubrique.titre}, entre archers${n ? ` : ${pluriel(n, 'annonce')} en ce moment` : ''}. ${rubrique.intro}`,
+    158,
+  );
+
+  const lignes = liste
+    .map(
+      (a) =>
+        `<li style="margin:0 0 10px"><a href="/listing/${a.id}" style="color:#1B1B1D">${html(a.title)}</a> — <strong>${html(prix(a.price))}</strong> · ${html(ETATS[a.condition] ?? '')} · ${html(a.city)}</li>`,
+    )
+    .join('');
+
+  const contenu = `${enteteSite}<main style="max-width:760px;margin:0 auto;padding:24px 20px">
+<nav style="font-size:13px;color:#909095"><a href="/">Annonces</a> → ${html(rubrique.titre)}</nav>
+<h1 style="margin:8px 0">${html(rubrique.titre)}</h1>
+<p>${html(rubrique.intro)}</p>
+<p>À lire avant d’acheter : <a href="${html(rubrique.guide.href)}">${html(rubrique.guide.label)}</a>.</p>
+<h2>${n ? `${pluriel(n, 'annonce')} en ce moment` : 'Aucune annonce en ce moment'}</h2>
+${n ? `<ul style="padding-left:20px">${lignes}</ul>` : '<p>Publiez ce que vous cherchez : les archers qui vendent cette catégorie seront prévenus. <a href="/wanted">Voir les recherches</a>.</p>'}
+${categoriesPeuplees.length > (n ? 1 : 0) ? `<h2>Les autres catégories</h2><ul>${lienCategories(id)}</ul>` : ''}
+</main>`;
+
+  const donnees = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        name: rubrique.titre,
+        description: rubrique.intro,
+        url,
+        inLanguage: 'fr-FR',
+        isPartOf: { '@id': `${SITE}/#site` },
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: n,
+          itemListElement: liste.map((a, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `${SITE}/listing/${a.id}`,
+            name: a.title,
+          })),
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Annonces', item: `${SITE}/` },
+          { '@type': 'ListItem', position: 2, name: rubrique.titre, item: url },
+        ],
+      },
+    ],
+  };
+
+  ecrire(
+    `categorie/${ADRESSES[id]}.html`,
+    page({
+      titre,
+      description,
+      canonique: n ? url : undefined,
+      robots: n ? undefined : 'noindex, follow',
+      image: liste[0]?.photos[0],
+      donnees,
+      contenu,
     }),
   );
 }
@@ -440,27 +594,87 @@ ecrire(
 
 // --- Le sitemap ----------------------------------------------------------------
 
-const fixes = [...fs.readFileSync(path.join(docs, 'sitemap.xml'), 'utf8').matchAll(/<url>[\s\S]*?<\/url>/g)].map(
-  (m) => m[0],
-);
-const jour = (date) => String(date).slice(0, 10);
-const pagesAnnonces = annonces.map(
-  (a) =>
-    `  <url>\n    <loc>${SITE}/listing/${a.id}</loc>\n    <lastmod>${jour(a.updated_at ?? a.created_at)}</lastmod>\n    <priority>0.7</priority>\n  </url>`,
-);
-const recherches = `  <url>\n    <loc>${SITE}/wanted</loc>\n    <priority>0.6</priority>\n  </url>`;
+const jour = (date) => String(date ?? '').slice(0, 10);
+const plusRecent = (liste) => liste.map((a) => jour(a.updated_at ?? a.created_at)).sort().at(-1);
+
+/** Chaque entrée du sitemap, avant d'être écrite : adresse, date, photos. */
+const entrees = [];
+
+// Les pages éditoriales, telles que docs/sitemap.xml les date. L'accueil fait
+// exception : c'est le fil d'annonces, et il change avec chaque annonce — sa
+// date est celle de la plus récente.
+for (const bloc of fs.readFileSync(path.join(docs, 'sitemap.xml'), 'utf8').matchAll(/<url>([\s\S]*?)<\/url>/g)) {
+  const loc = /<loc>([^<]+)<\/loc>/.exec(bloc[1])?.[1];
+  if (!loc) continue;
+  const lastmod = loc === `${SITE}/` ? plusRecent(annonces) ?? /<lastmod>([^<]+)</.exec(bloc[1])?.[1] : /<lastmod>([^<]+)</.exec(bloc[1])?.[1];
+  entrees.push({ loc, lastmod, priority: /<priority>([^<]+)</.exec(bloc[1])?.[1] });
+}
+entrees.push({ loc: `${SITE}/wanted`, priority: '0.6' });
+
+for (const id of categoriesPeuplees) {
+  entrees.push({ loc: urlCategorie(id), lastmod: plusRecent(parCategorie[id]), priority: '0.8' });
+}
+
+// Les photos de chaque annonce, au format image de Google : du matériel
+// d'archerie se cherche aussi en images, et une photo indexée ramène à sa
+// fiche.
+for (const a of annonces) {
+  entrees.push({
+    loc: `${SITE}/listing/${a.id}`,
+    lastmod: jour(a.updated_at ?? a.created_at),
+    priority: '0.7',
+    images: a.photos,
+  });
+}
+
+const xml = (texte) => String(texte).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 ecrire(
   'sitemap.xml',
   `<?xml version="1.0" encoding="UTF-8"?>
-<!-- Construit par scripts/site/construire.mjs : pages éditoriales de docs/sitemap.xml, puis une entrée par annonce publiée. -->
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${fixes.map((u) => `  ${u}`).join('\n')}
-${recherches}
-${pagesAnnonces.join('\n')}
+<!-- Construit par scripts/site/construire.mjs : pages éditoriales de docs/sitemap.xml, pages de catégorie, puis une entrée par annonce publiée avec ses photos. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${entrees
+  .map((e) =>
+    [
+      '  <url>',
+      `    <loc>${xml(e.loc)}</loc>`,
+      e.lastmod ? `    <lastmod>${xml(e.lastmod)}</lastmod>` : '',
+      e.priority ? `    <priority>${xml(e.priority)}</priority>` : '',
+      ...(e.images ?? []).map((i) => `    <image:image><image:loc>${xml(i)}</image:loc></image:image>`),
+      '  </url>',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  )
+  .join('\n')}
 </urlset>
 `,
 );
 
+// --- Ce qui a changé depuis la publication précédente -------------------------
+
+// Pour prévenir les moteurs (IndexNow, voir scripts/site/signaler.mjs), on
+// compare avec le sitemap actuellement en ligne : une adresse nouvelle, ou
+// dont la date a changé, est à signaler. Les autres n'ont rien appris de
+// neuf aux moteurs, et les leur renvoyer à chaque passage les fatiguerait.
+let enLigne = new Map();
+try {
+  const reponse = await fetch(`${SITE}/sitemap.xml`, { headers: { 'Cache-Control': 'no-cache' } });
+  if (reponse.ok) {
+    for (const bloc of (await reponse.text()).matchAll(/<url>([\s\S]*?)<\/url>/g)) {
+      const loc = /<loc>([^<]+)<\/loc>/.exec(bloc[1])?.[1];
+      if (loc) enLigne.set(loc, /<lastmod>([^<]+)</.exec(bloc[1])?.[1] ?? null);
+    }
+  }
+} catch {
+  // Sitemap en ligne illisible : on signalera tout, ce qui reste correct.
+  enLigne = new Map();
+}
+const aSignaler = entrees
+  .filter((e) => !enLigne.has(e.loc) || (e.lastmod && enLigne.get(e.loc) !== e.lastmod))
+  .map((e) => e.loc);
+fs.writeFileSync(`${sortie}.a-signaler.json`, JSON.stringify(aSignaler, null, 2));
+
 console.log(
-  `site assemblé dans ${sortie} : ${annonces.length} annonce(s), ${Object.keys(ECRANS).length} écran(s) à adresse fixe, ${fixes.length + 1 + annonces.length} URL au sitemap`,
+  `site assemblé dans ${sortie} : ${annonces.length} annonce(s), ${categoriesPeuplees.length}/${Object.keys(CATEGORIES).length} catégorie(s) indexable(s), ${entrees.length} URL au sitemap, ${aSignaler.length} à signaler aux moteurs`,
 );

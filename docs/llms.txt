@@ -1,8 +1,9 @@
 # Archers Market
 
 > Place de marché française du matériel de tir à l'arc d'occasion entre
-> particuliers, sous forme d'application mobile gratuite pour iPhone et
-> Android. Arcs classiques et à poulies, branches, poignées, viseurs,
+> particuliers, sur le site archersmarket.fr et dans une application mobile
+> gratuite pour iPhone et Android. Le site et l'application donnent accès au
+> même marché : mêmes annonces, mêmes comptes, même paiement protégé. Arcs classiques et à poulies, branches, poignées, viseurs,
 > stabilisation, flèches et accessoires, décrits avec les caractéristiques
 > propres à l'archerie : puissance, longueur d'arc, allonge, spine, main d'arc.
 
@@ -27,6 +28,12 @@ déformés, et ils font foi :
 
 Édité en France. Paiements opérés par Stripe, expédition par Boxtal, données
 hébergées à Londres, au Royaume-Uni. Contact : contact@archersmarket.fr
+
+## Le marché
+
+- [Les annonces](https://archersmarket.fr/) : le fil d'annonces en cours, filtrable par catégorie (par exemple https://archersmarket.fr/?category=limbs pour les branches). Chaque annonce a sa page, à l'adresse https://archersmarket.fr/listing/<identifiant>, avec son prix, son état et ses caractéristiques.
+- [Ce que les archers cherchent](https://archersmarket.fr/wanted) : les demandes de matériel publiées par les membres.
+- [À propos](https://archersmarket.fr/a-propos.html) : ce qu'est Archers Market, ses frais, son fonctionnement.
 
 ## Guides sur le matériel d'occasion
 

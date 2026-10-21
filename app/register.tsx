@@ -40,7 +40,13 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      await signUp({ name, email, password, city, club: club || undefined });
+      const resultat = await signUp({ name, email, password, city, club: club || undefined });
+      // Compte créé mais en attente de confirmation : c'est une réussite, et
+      // elle mérite son propre écran plutôt qu'une ligne rouge sous un champ.
+      if (!resultat.confirme) {
+        router.replace({ pathname: '/verify-email', params: { email: resultat.email } });
+        return;
+      }
       router.canGoBack() ? router.back() : router.replace('/');
     } catch (err) {
       setErrors({ email: (err as Error).message });

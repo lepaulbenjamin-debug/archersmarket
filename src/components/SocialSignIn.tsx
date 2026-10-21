@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AppleSignInButton } from '@/components/AppleSignInButton';
 import { appleSignInAvailable, signInWithApple, signInWithGoogle } from '@/services/oauth';
 import { colors, radius, spacing } from '@/theme';
 
@@ -53,13 +53,7 @@ export function SocialSignIn({
             <ActivityIndicator color={colors.text} />
           </View>
         ) : (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={999}
-            style={styles.apple}
-            onPress={() => run('apple')}
-          />
+          <AppleSignInButton style={styles.apple} onPress={() => run('apple')} />
         )
       ) : null}
 

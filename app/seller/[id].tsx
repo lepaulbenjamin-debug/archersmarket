@@ -52,7 +52,7 @@ export default function SellerScreen() {
   }
 
   return (
-    <Screen>
+    <Screen wide>
       <Header
         title={seller.name}
         showBack

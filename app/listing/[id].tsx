@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Dimensions,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -18,6 +18,7 @@ import { BuyButton } from '@/components/BuyButton';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { ListingCard } from '@/components/ListingCard';
+import { ListingManageSheet } from '@/components/ListingManageSheet';
 import { Rating } from '@/components/Rating';
 import { ReportSheet } from '@/components/ReportSheet';
 import { Screen } from '@/components/Screen';
@@ -31,8 +32,8 @@ import { useListings } from '@/store/ListingsContext';
 import { useMessages } from '@/store/MessagesContext';
 import { discountPercent, formatPrice, formatRelativeDate } from '@/utils/format';
 import { imageSource } from '@/utils/images';
+import { SITE_PAGE, useContentWidth } from '@/utils/site';
 
-const { width } = Dimensions.get('window');
 
 export default function ListingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,8 +43,14 @@ export default function ListingScreen() {
   const { openConversation } = useMessages();
   const [imageIndex, setImageIndex] = useState(0);
   const [reporting, setReporting] = useState(false);
+  const [managing, setManaging] = useState(false);
   const [convoyeurs, setConvoyeurs] = useState(0);
   const viewed = useRef(false);
+  // La largeur de la colonne, pas celle de la fenêtre : sur le site, la fiche
+  // tient dans 760 px même sur un écran de 1 920.
+  const width = useContentWidth();
+  const hauteurPhoto = Platform.OS === 'web' ? Math.min(width * 0.75, 520) : width * 0.92;
+  const carrousel = useRef<ScrollView>(null);
 
   const listing = id ? listingById(id) : undefined;
   const seller = listing ? userById(listing.sellerId) : undefined;
@@ -157,18 +164,26 @@ export default function ListingScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View>
           <ScrollView
+            ref={carrousel}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={(event) =>
               setImageIndex(Math.round(event.nativeEvent.contentOffset.x / width))
             }
+            // Un navigateur ne signale pas la fin d'un élan : on suit le défilement.
+            onScroll={
+              Platform.OS === 'web'
+                ? (event) => setImageIndex(Math.round(event.nativeEvent.contentOffset.x / width))
+                : undefined
+            }
+            scrollEventThrottle={Platform.OS === 'web' ? 100 : undefined}
           >
             {images.map((image, index) => (
               <Image
                 key={`${image}-${index}`}
                 source={imageSource(image, listing.category)}
-                style={styles.hero}
+                style={[styles.hero, { width, height: hauteurPhoto }]}
                 contentFit="cover"
                 transition={180}
               />
@@ -193,6 +208,31 @@ export default function ListingScreen() {
               </View>
             </View>
           </SafeAreaView>
+
+          {/* À la souris, on ne fait pas glisser une photo du bout du doigt :
+              sur le site, deux flèches pour passer de l'une à l'autre. */}
+          {Platform.OS === 'web' && images.length > 1 ? (
+            <View style={[styles.fleches, { top: hauteurPhoto / 2 - 19 }]} pointerEvents="box-none">
+              <RoundButton
+                icon="chevron-left"
+                label="Photo précédente"
+                onPress={() => {
+                  const cible = Math.max(0, imageIndex - 1);
+                  carrousel.current?.scrollTo({ x: cible * width, animated: true });
+                  setImageIndex(cible);
+                }}
+              />
+              <RoundButton
+                icon="chevron-right"
+                label="Photo suivante"
+                onPress={() => {
+                  const cible = Math.min(images.length - 1, imageIndex + 1);
+                  carrousel.current?.scrollTo({ x: cible * width, animated: true });
+                  setImageIndex(cible);
+                }}
+              />
+            </View>
+          ) : null}
 
           {images.length > 1 ? (
             <View style={styles.dots}>
@@ -343,6 +383,14 @@ export default function ListingScreen() {
         subject={listing.title}
       />
 
+      <ListingManageSheet
+        visible={managing}
+        listing={listing}
+        onClose={() => setManaging(false)}
+        // L'annonce supprimée, l'écran qui la montre n'a plus rien à montrer.
+        onDeleted={() => router.back()}
+      />
+
       <SafeAreaView edges={['bottom']} style={styles.footer}>
         <View style={styles.footerInner}>
           <View style={styles.footerPrice}>
@@ -353,7 +401,7 @@ export default function ListingScreen() {
             <Button
               label="Gérer mon annonce"
               icon="cog-outline"
-              onPress={() => router.push('/(tabs)/profile')}
+              onPress={() => setManaging(true)}
               style={styles.footerButton}
             />
           ) : (
@@ -420,9 +468,21 @@ function MetaItem({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: {
+    flex: 1,
+    backgroundColor: colors.background,
+    // Sur le site, la fiche est une colonne centrée, comme les autres pages.
+    ...(Platform.OS === 'web' ? { width: '100%' as const, maxWidth: SITE_PAGE, alignSelf: 'center' as const } : {}),
+  },
   content: { paddingBottom: 120 },
-  hero: { width, height: width * 0.92, backgroundColor: colors.surfaceAlt },
+  hero: { backgroundColor: colors.surfaceAlt },
+  fleches: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   heroOverlay: { position: 'absolute', top: 0, left: 0, right: 0 },
   heroActions: {
     flexDirection: 'row',

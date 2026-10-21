@@ -1,5 +1,4 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useStripe } from '@stripe/stripe-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -20,6 +19,7 @@ import {
 } from '@/services/shipping';
 import { AddressField } from '@/components/AddressField';
 import { RelayPointPicker } from '@/components/RelayPointPicker';
+import { usePaymentSheet } from '@/components/usePaymentSheet';
 import { CivilityPicker } from '@/components/CivilityPicker';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
@@ -41,7 +41,8 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const { user, userById } = useAuth();
   const { listings } = useListings();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  // Feuille native sur téléphone, Payment Element sur le site : même interface.
+  const { pay, sheet } = usePaymentSheet();
 
   const listing = useMemo(() => listings.find((item) => item.id === id), [listings, id]);
   const seller = listing ? userById(listing.sellerId) : undefined;
@@ -245,35 +246,9 @@ export default function CheckoutScreen() {
         tripId: trip?.id,
       });
 
-      const { error: init } = await initPaymentSheet({
-        merchantDisplayName: 'Archers Market',
-        paymentIntentClientSecret: clientSecret,
-        allowsDelayedPaymentMethods: false,
-        returnURL: 'archersmarket://commande',
-        appearance: {
-          colors: { primary: colors.primary },
-          primaryButton: {
-            // Nos propres boutons sont des pilules, obtenues avec un rayon de
-            // 999. Ici, ce chiffre fait purement et simplement disparaître le
-            // bouton de paiement — le rayon est appliqué tel quel par le SDK,
-            // et un rayon plus grand que la moitié de la hauteur dégénère.
-            // 26 vaut la moitié de la hauteur du bouton : même arrondi, mais
-            // le bouton existe.
-            shapes: { borderRadius: 26 },
-            // Explicites plutôt que déduites : un bouton invisible est déjà
-            // arrivé une fois, on ne laisse plus la couleur au hasard.
-            colors: { background: colors.primary, text: colors.onPrimary },
-          },
-        },
-      });
-      if (init) throw new Error(init.message);
-
-      const { error: payment } = await presentPaymentSheet();
-      if (payment) {
-        // Un abandon n'est pas un incident : la commande reste en attente.
-        if (payment.code !== 'Canceled') Alert.alert('Paiement interrompu', payment.message);
-        return;
-      }
+      const issue = await pay({ clientSecret, orderId });
+      // Un abandon n'est pas un incident : la commande reste en attente.
+      if (issue !== 'paid') return;
       router.replace(`/order/${orderId}`);
     } catch (err) {
       setError((err as Error).message);
@@ -621,6 +596,7 @@ export default function CheckoutScreen() {
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+      {sheet}
     </Screen>
   );
 }

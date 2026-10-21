@@ -1,0 +1,77 @@
+# Construit et publie archersmarket.fr.
+#
+# Le site n'est plus un dossier de pages servi tel quel : c'est l'application
+# web, compilée depuis le même code que l'app mobile, à laquelle on ajoute les
+# guides de docs/ et une page par annonce publiée. Le tout est assemblé par
+# scripts/site/construire.mjs, puis publié sur GitHub Pages.
+#
+# Prérequis, une seule fois : Settings → Pages → Source : « GitHub Actions ».
+# Tant que la source reste « Deploy from a branch », Pages continue de servir
+# docs/ et l'étape de publication échoue — sans rien casser du site en ligne.
+
+name: Site archersmarket.fr
+
+on:
+  push:
+    branches: [main]
+  # Les annonces publiées depuis la dernière construction obtiennent leur
+  # page indexable. Entre deux passages, elles sont déjà visibles sur le site :
+  # c'est l'application qui les affiche, seule leur page pour les moteurs
+  # attend la prochaine construction.
+  #
+  # À savoir : GitHub suspend les tâches planifiées d'un dépôt public sans
+  # activité pendant 60 jours. Une relance manuelle les réactive.
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+  # Pour une reconstruction déclenchée de l'extérieur — par exemple à chaque
+  # nouvelle annonce, depuis la base.
+  repository_dispatch:
+    types: [annonces]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une publication à la fois, et jamais interrompue en cours de route : une
+# publication à moitié faite servirait des pages qui pointent vers un paquet
+# JavaScript qui n'existe pas encore.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Les versions exactes du fichier de verrouillage, comme pour les builds
+      # mobiles : une dépendance qui dérive ici dériverait en production.
+      - run: npm ci
+
+      # Les clés publiques viennent de .env, versionné. Aucun secret n'est
+      # nécessaire : le site lit la base comme un visiteur non connecté.
+      - run: npx expo export --platform web --output-dir dist
+
+      - run: node scripts/site/construire.mjs dist docs site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publier:
+    needs: construire
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publication.outputs.page_url }}
+    steps:
+      - id: publication
+        uses: actions/deploy-pages@v4

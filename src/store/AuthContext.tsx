@@ -1,7 +1,8 @@
+import * as Linking from 'expo-linking';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import * as authService from '@/services/auth';
-import type { Credentials, SignUpInput } from '@/services/auth';
+import type { Credentials, SignUpInput, SignUpResult } from '@/services/auth';
 import { supabase } from '@/services/supabase';
 import type { User } from '@/types';
 
@@ -10,7 +11,7 @@ interface AuthValue {
   users: User[];
   loading: boolean;
   signIn: (credentials: Credentials) => Promise<void>;
-  signUp: (input: SignUpInput) => Promise<void>;
+  signUp: (input: SignUpInput) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
   resetPassword: (email: string, token: string, password: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -51,6 +52,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => data.subscription.unsubscribe();
   }, [refreshUsers]);
 
+  /**
+   * Le retour du lien de confirmation.
+   *
+   * Le lien reçu par e-mail rouvre l'application par `archersmarket://` en
+   * portant les jetons de session. Sans ce relais, il l'ouvre et il ne se
+   * passe rien : le compte est bien confirmé côté serveur, mais l'archer
+   * retombe sur l'écran de connexion sans comprendre ce qu'on attend de lui.
+   *
+   * Deux points d'entrée, parce que l'application peut être fermée — le lien
+   * la démarre, `getInitialURL` le rend — ou déjà ouverte en arrière-plan, et
+   * l'événement `url` la réveille.
+   */
+  useEffect(() => {
+    let vivant = true;
+
+    const ouvrir = async (url: string | null) => {
+      if (!url) return;
+      const tokens = authService.tokensFromUrl(url);
+      if (!tokens) return;
+      try {
+        const profil = await authService.signInWithTokens(tokens);
+        if (!vivant) return;
+        setUser(profil);
+        refreshUsers();
+      } catch {
+        // Lien périmé ou déjà consommé : l'écran de connexion reste ouvert,
+        // et il n'y a rien d'utile à annoncer par-dessus.
+      }
+    };
+
+    Linking.getInitialURL().then(ouvrir);
+    const abonnement = Linking.addEventListener('url', ({ url }) => ouvrir(url));
+    return () => {
+      vivant = false;
+      abonnement.remove();
+    };
+  }, [refreshUsers]);
+
   const signIn = useCallback(
     async (credentials: Credentials) => {
       setUser(await authService.signIn(credentials));
@@ -61,8 +100,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = useCallback(
     async (input: SignUpInput) => {
-      setUser(await authService.signUp(input));
-      refreshUsers();
+      const resultat = await authService.signUp(input);
+      // Sans confirmation, il n'y a pas encore de session : on ne connecte
+      // personne, on laisse l'écran d'inscription conduire vers l'e-mail.
+      if (resultat.confirme) {
+        setUser(resultat.user);
+        refreshUsers();
+      }
+      return resultat;
     },
     [refreshUsers],
   );

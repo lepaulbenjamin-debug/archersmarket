@@ -18,9 +18,11 @@ import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
 import type { CategoryId, ListingFilters } from '@/types';
+import { useDesktopWeb } from '@/utils/site';
 
 export default function BrowseScreen() {
   const router = useRouter();
+  const bureau = useDesktopWeb();
   const params = useLocalSearchParams<{ category?: string; q?: string }>();
   const { user } = useAuth();
   const { search, isFavorite, toggleFavorite, loading, error, refresh } = useListings();
@@ -109,7 +111,10 @@ export default function BrowseScreen() {
   };
 
   return (
-    <Screen>
+    <Screen wide>
+      {/* Sur écran d'ordinateur, la marque et les favoris sont déjà dans la
+          barre du site : les répéter ici empilerait deux logos. */}
+      {bureau ? null : (
       <View style={styles.brandBar}>
         <Logo size={34} wordSize={16} />
         <Pressable
@@ -122,8 +127,9 @@ export default function BrowseScreen() {
           <MaterialCommunityIcons name="heart-outline" size={20} color={colors.text} />
         </Pressable>
       </View>
+      )}
 
-      <View style={styles.searchBar}>
+      <View style={[styles.searchBar, bureau && styles.searchBarBureau]}>
         <View style={styles.searchInput}>
           <SearchField value={query} onChangeText={setQuery} />
         </View>
@@ -139,6 +145,23 @@ export default function BrowseScreen() {
               <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
             </View>
           ) : null}
+        </Pressable>
+      </View>
+
+      {/* Deux faces du même marché : ce qui est à vendre, et ce que les gens
+          cherchent. La bascule est ici plutôt que dans un sixième onglet —
+          cinq est déjà la limite sur un téléphone, et la demande a sa place à
+          côté de l'offre. */}
+      <View style={styles.bascule}>
+        <View style={[styles.basculeChoix, styles.basculeActif]}>
+          <Text style={styles.basculeActifTexte}>Annonces</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/wanted')}
+          style={({ pressed }) => [styles.basculeChoix, pressed && styles.pressed]}
+        >
+          <Text style={styles.basculeTexte}>Recherches</Text>
         </Pressable>
       </View>
 
@@ -255,12 +278,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surfaceAlt,
   },
+  bascule: {
+    flexDirection: 'row',
+    gap: 4,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
+    padding: 4,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  basculeChoix: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+  },
+  basculeActif: { backgroundColor: colors.surface },
+  basculeActifTexte: { fontSize: 13.5, fontWeight: '700', color: colors.text },
+  basculeTexte: { fontSize: 13.5, fontWeight: '600', color: colors.textMuted },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
   },
+  searchBarBureau: { paddingTop: spacing.xl },
   searchInput: { flex: 1 },
   filterButton: {
     width: 46,

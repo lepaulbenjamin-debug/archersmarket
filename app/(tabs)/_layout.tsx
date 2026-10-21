@@ -4,10 +4,14 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { colors } from '@/theme';
+import { useDesktopWeb } from '@/utils/site';
 import { useMessages } from '@/store/MessagesContext';
 
 export default function TabsLayout() {
   const { unreadCount } = useMessages();
+  // Sur écran d'ordinateur, la navigation est en haut (SiteHeader) : une barre
+  // d'onglets collée au bas d'un écran de 27 pouces ne se trouve pas.
+  const bureau = useDesktopWeb();
 
   return (
     <Tabs
@@ -15,7 +19,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarStyle: {
+        tabBarStyle: bureau ? { display: 'none' } : {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           height: Platform.OS === 'ios' ? 86 : 62,

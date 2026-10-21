@@ -1,12 +1,13 @@
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Onboarding } from '@/components/Onboarding';
+import { PaymentProvider } from '@/components/PaymentProvider';
+import { SiteHeader } from '@/components/SiteHeader';
 import { WhatsNew } from '@/components/WhatsNew';
 import { NOUVEAUTES } from '@/data/whatsNew';
 import {
@@ -28,6 +29,15 @@ function RootNavigator() {
   const [nouveautes, setNouveautes] = useState(false);
 
   useEffect(() => {
+    // Sur le site, ni accueil plein écran ni nouveautés. Quelqu'un qui arrive
+    // de Google sur une annonce vient voir cette annonce : la recouvrir d'une
+    // présentation en trois écrans, c'est le faire repartir. Et les
+    // « nouveautés » parlent des mises à jour de l'application, qu'un
+    // visiteur du site n'a jamais installée.
+    if (Platform.OS === 'web') {
+      setAccueilVu(true);
+      return;
+    }
     Promise.all([hasSeenOnboarding(), lastSeenNews()]).then(([vu, dernier]) => {
       setAccueilVu(vu);
       // Les nouveautés ne s'annoncent qu'à qui connaissait déjà l'application.
@@ -61,6 +71,8 @@ function RootNavigator() {
 
   return (
     <View style={styles.root}>
+      {/* Navigation du site sur écran d'ordinateur ; rien sur téléphone. */}
+      <SiteHeader />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -80,6 +92,10 @@ function RootNavigator() {
         <Stack.Screen name="account/address" />
         <Stack.Screen name="account/alerts" />
         <Stack.Screen name="account/dac7" />
+        <Stack.Screen name="wanted/index" />
+        <Stack.Screen name="wanted/new" />
+        <Stack.Screen name="wanted/[id]" />
+        <Stack.Screen name="account/wanted-alerts" />
         <Stack.Screen name="trips/index" />
         <Stack.Screen name="trips/new" />
         <Stack.Screen name="order/[id]" />
@@ -87,6 +103,7 @@ function RootNavigator() {
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
         <Stack.Screen name="forgot-password" options={{ presentation: 'modal' }} />
         <Stack.Screen name="register" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="verify-email" options={{ presentation: 'modal' }} />
       </Stack>
 
       {/* Posé par-dessus le navigateur plutôt qu'à sa place : il doit pouvoir
@@ -111,10 +128,10 @@ export default function RootLayout() {
           <ListingsProvider>
             <MessagesProvider>
               <PushProvider>
-                <StripeProvider publishableKey={process.env.EXPO_PUBLIC_STRIPE_KEY ?? ''}>
+                <PaymentProvider>
                   <StatusBar style="dark" />
                   <RootNavigator />
-                </StripeProvider>
+                </PaymentProvider>
               </PushProvider>
             </MessagesProvider>
           </ListingsProvider>

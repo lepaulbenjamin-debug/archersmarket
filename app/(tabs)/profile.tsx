@@ -306,6 +306,21 @@ export default function ProfileScreen() {
 
           <Pressable
             accessibilityRole="button"
+            onPress={() => router.push('/wanted')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="bullhorn-outline" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Ce que les archers cherchent</Text>
+              <Text style={styles.settingHint}>
+                Dire ce que vous cherchez, ou être prévenu des demandes sur ce que vous vendez.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
             onPress={() => router.push('/trips')}
             style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
           >

@@ -7,6 +7,12 @@ type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 export interface Category {
   id: CategoryId;
+  /**
+   * L'adresse de la catégorie sur le site : `/categorie/<slug>`. En français,
+   * parce que c'est ce qu'on tape dans Google — « branches », pas « limbs ».
+   * Une fois publiée, ne plus la changer : ce serait perdre la page indexée.
+   */
+  slug: string;
   label: string;
   short: string;
   icon: IconName;
@@ -15,27 +21,30 @@ export interface Category {
 }
 
 export const categories: Category[] = [
-  { id: 'bow-recurve', label: 'Arc classique complet', short: 'Classique', icon: 'bow-arrow', specs: ['drawWeight', 'bowLength'] },
-  { id: 'riser', label: 'Poignées', short: 'Poignées', icon: 'gesture-tap-hold', specs: ['bowLength'] },
-  { id: 'limbs', label: 'Branches', short: 'Branches', icon: 'chart-bell-curve', specs: ['drawWeight', 'bowLength'] },
-  { id: 'bow-compound', label: 'Arc à poulies', short: 'Poulies', icon: 'cog-outline', specs: ['drawWeight', 'drawLength'] },
-  { id: 'bow-longbow', label: 'Arc traditionnel / longbow', short: 'Trad', icon: 'pine-tree', specs: ['drawWeight', 'bowLength'] },
-  { id: 'arrows', label: 'Flèches & tubes', short: 'Flèches', icon: 'arrow-top-right', specs: ['spine'] },
-  { id: 'arrow-parts', label: 'Pointes, plumes & encoches', short: 'Composants', icon: 'puzzle-outline', specs: ['spine'] },
-  { id: 'sight', label: 'Viseurs & scopes', short: 'Viseurs', icon: 'target-variant', specs: [] },
-  { id: 'rest', label: 'Repose-flèches & berger', short: 'Repose-flèche', icon: 'call-split', specs: [] },
-  { id: 'stabilizer', label: 'Stabilisation', short: 'Stab', icon: 'ray-start-arrow', specs: ['size'] },
-  { id: 'release', label: 'Décocheurs & palettes', short: 'Décocheur', icon: 'hand-back-right-outline', specs: ['size'] },
-  { id: 'quiver', label: 'Carquois', short: 'Carquois', icon: 'bag-personal-outline', specs: [] },
-  { id: 'protection', label: 'Protections', short: 'Protection', icon: 'shield-outline', specs: ['size'] },
-  { id: 'string', label: 'Cordes & accessoires', short: 'Cordes', icon: 'vector-polyline', specs: ['bowLength'] },
-  { id: 'tools', label: 'Outils & réglage', short: 'Outils', icon: 'wrench-outline', specs: [] },
-  { id: 'target', label: 'Cibles & blasons', short: 'Cibles', icon: 'bullseye-arrow', specs: ['size'] },
-  { id: 'apparel', label: 'Textile & bagagerie', short: 'Textile', icon: 'tshirt-crew-outline', specs: ['size'] },
+  { id: 'bow-recurve', slug: 'arc-classique', label: 'Arc classique complet', short: 'Classique', icon: 'bow-arrow', specs: ['drawWeight', 'bowLength'] },
+  { id: 'riser', slug: 'poignees', label: 'Poignées', short: 'Poignées', icon: 'gesture-tap-hold', specs: ['bowLength'] },
+  { id: 'limbs', slug: 'branches', label: 'Branches', short: 'Branches', icon: 'chart-bell-curve', specs: ['drawWeight', 'bowLength'] },
+  { id: 'bow-compound', slug: 'arc-a-poulies', label: 'Arc à poulies', short: 'Poulies', icon: 'cog-outline', specs: ['drawWeight', 'drawLength'] },
+  { id: 'bow-longbow', slug: 'arc-traditionnel', label: 'Arc traditionnel / longbow', short: 'Trad', icon: 'pine-tree', specs: ['drawWeight', 'bowLength'] },
+  { id: 'arrows', slug: 'fleches', label: 'Flèches & tubes', short: 'Flèches', icon: 'arrow-top-right', specs: ['spine'] },
+  { id: 'arrow-parts', slug: 'pointes-plumes-encoches', label: 'Pointes, plumes & encoches', short: 'Composants', icon: 'puzzle-outline', specs: ['spine'] },
+  { id: 'sight', slug: 'viseurs', label: 'Viseurs & scopes', short: 'Viseurs', icon: 'target-variant', specs: [] },
+  { id: 'rest', slug: 'repose-fleches', label: 'Repose-flèches & berger', short: 'Repose-flèche', icon: 'call-split', specs: [] },
+  { id: 'stabilizer', slug: 'stabilisation', label: 'Stabilisation', short: 'Stab', icon: 'ray-start-arrow', specs: ['size'] },
+  { id: 'release', slug: 'decocheurs', label: 'Décocheurs & palettes', short: 'Décocheur', icon: 'hand-back-right-outline', specs: ['size'] },
+  { id: 'quiver', slug: 'carquois', label: 'Carquois', short: 'Carquois', icon: 'bag-personal-outline', specs: [] },
+  { id: 'protection', slug: 'protections', label: 'Protections', short: 'Protection', icon: 'shield-outline', specs: ['size'] },
+  { id: 'string', slug: 'cordes', label: 'Cordes & accessoires', short: 'Cordes', icon: 'vector-polyline', specs: ['bowLength'] },
+  { id: 'tools', slug: 'outils', label: 'Outils & réglage', short: 'Outils', icon: 'wrench-outline', specs: [] },
+  { id: 'target', slug: 'cibles', label: 'Cibles & blasons', short: 'Cibles', icon: 'bullseye-arrow', specs: ['size'] },
+  { id: 'apparel', slug: 'textile', label: 'Textile & bagagerie', short: 'Textile', icon: 'tshirt-crew-outline', specs: ['size'] },
 ];
 
 export const categoryById = (id: CategoryId): Category =>
   categories.find((c) => c.id === id) ?? categories[0];
+
+export const categoryBySlug = (slug: string | undefined): Category | undefined =>
+  categories.find((c) => c.slug === slug);
 
 export interface Condition {
   id: ConditionId;

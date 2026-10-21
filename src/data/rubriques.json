@@ -1,0 +1,139 @@
+{
+  "_": "Le texte des pages de catégorie, sur le site. Lu par l’application (en-tête de /categorie/<slug>, sur le web) et par scripts/site/construire.mjs (pages pré-rendues). Clés : identifiants du catalogue, src/data/catalog.ts.",
+  "bow-recurve": {
+    "titre": "Arcs classiques d’occasion",
+    "intro": "Un arc classique se juge à sa longueur, à sa puissance réelle à votre allonge, et à l’état de ses branches. Vérifiez que l’attache est la même entre poignée et branches — ILF ou Formula ne se mélangent pas — et que la main d’arc est la vôtre.",
+    "guide": {
+      "href": "/arc-classique-occasion.html",
+      "label": "Acheter un arc classique d’occasion"
+    }
+  },
+  "riser": {
+    "titre": "Poignées d’arc d’occasion",
+    "intro": "La poignée est la pièce qui s’use le moins : un bloc d’aluminium ou de carbone qui ne fléchit pas, et qui garde sa valeur des années. Regardez la longueur — 23, 25 ou 27 pouces —, le système d’attache des branches, et la main d’arc : une poignée droitière ne se tire pas de la main gauche.",
+    "guide": {
+      "href": "/arc-classique-occasion.html",
+      "label": "Acheter un arc classique d’occasion"
+    }
+  },
+  "limbs": {
+    "titre": "Branches d’arc d’occasion",
+    "intro": "C’est la catégorie qui tourne le plus : on change de branches en montant en puissance. La puissance gravée vaut à 28 pouces d’allonge sur une poignée de 25 — comptez environ 2 livres par pouce d’écart. Avant d’acheter, vérifiez l’attache, la longueur, et l’absence de vrille ou de délaminage.",
+    "guide": {
+      "href": "/arc-classique-occasion.html",
+      "label": "Acheter un arc classique d’occasion"
+    }
+  },
+  "bow-compound": {
+    "titre": "Arcs à poulies d’occasion",
+    "intro": "Un compound se décote vite mais s’use peu : c’est la meilleure affaire du marché, à une condition — que son allonge se règle jusqu’à la vôtre. Demandez la plage de réglage et la façon de la changer, la puissance maximale, et l’âge des cordes et câbles.",
+    "guide": {
+      "href": "/arc-a-poulies-occasion.html",
+      "label": "Acheter un arc à poulies d’occasion"
+    }
+  },
+  "bow-longbow": {
+    "titre": "Arcs traditionnels et longbows d’occasion",
+    "intro": "Longbows, arcs droits, recurves de chasse : ici, la puissance et la longueur décident de tout, et l’état du bois ou des lamelles se vérifie de près. Un arc monobloc ne se démonte pas — pensez à la remise en main propre ou au convoyage entre archers.",
+    "guide": {
+      "href": "/materiel-occasion.html",
+      "label": "Le matériel de tir à l’arc d’occasion"
+    }
+  },
+  "arrows": {
+    "titre": "Flèches et tubes d’occasion",
+    "intro": "Une flèche se coupe, elle ne se rallonge pas : la longueur de coupe passe avant le prix. Le spine doit correspondre à la puissance de votre arc, et tout tube carbone déjà tiré se contrôle avant usage. Les tubes nus non coupés sont la meilleure affaire du rayon.",
+    "guide": {
+      "href": "/fleches-occasion.html",
+      "label": "Flèches et tubes d’occasion"
+    }
+  },
+  "arrow-parts": {
+    "titre": "Pointes, plumes et encoches d’occasion",
+    "intro": "Les composants se choisissent selon le tube qui les reçoit : diamètre intérieur pour les encoches et les inserts, poids des pointes pour ajuster un spine un peu limite. Vérifiez la compatibilité avec la marque et la référence de vos tubes.",
+    "guide": {
+      "href": "/fleches-occasion.html",
+      "label": "Flèches et tubes d’occasion"
+    }
+  },
+  "sight": {
+    "titre": "Viseurs et scopes d’occasion",
+    "intro": "Un viseur ne s’use pratiquement pas et garde une bonne part de sa valeur. Vérifiez la main d’arc, la longueur de l’extension, le jeu des réglages micrométriques et l’état de la fibre ou de la lentille du scope.",
+    "guide": {
+      "href": "/prix-materiel-occasion.html",
+      "label": "Combien vaut du matériel d’occasion"
+    }
+  },
+  "rest": {
+    "titre": "Repose-flèches et berger buttons d’occasion",
+    "intro": "Repose-flèches et berger buttons sont de petites pièces de précision : la main d’arc compte, le filetage du berger aussi. Sur un repose-flèche magnétique ou à lame, regardez l’état de la lame et du mécanisme de retour.",
+    "guide": {
+      "href": "/arc-classique-occasion.html",
+      "label": "Acheter un arc classique d’occasion"
+    }
+  },
+  "stabilizer": {
+    "titre": "Stabilisation d’occasion",
+    "intro": "Barres centrales, latérales, V-bar et contrepoids : la stabilisation se compare à longueur et diamètre égaux. Elle s’use peu, mais vérifiez les filetages et la présence des poids annoncés.",
+    "guide": {
+      "href": "/prix-materiel-occasion.html",
+      "label": "Combien vaut du matériel d’occasion"
+    }
+  },
+  "release": {
+    "titre": "Décocheurs et palettes d’occasion",
+    "intro": "Décocheurs pour arc à poulies, palettes pour arc classique : la taille et la main décident. Sur un décocheur, la détente doit être franche et réglable ; sur une palette, l’état du cuir ou de la plaque se voit sur les photos.",
+    "guide": {
+      "href": "/materiel-occasion.html",
+      "label": "Le matériel de tir à l’arc d’occasion"
+    }
+  },
+  "quiver": {
+    "titre": "Carquois d’occasion",
+    "intro": "Carquois de ceinture pour la cible, de dos ou de terrain pour le parcours : vérifiez le nombre de tubes, la main — un carquois de ceinture se porte d’un côté — et l’état des attaches.",
+    "guide": {
+      "href": "/materiel-occasion.html",
+      "label": "Le matériel de tir à l’arc d’occasion"
+    }
+  },
+  "protection": {
+    "titre": "Protections de tir à l’arc d’occasion",
+    "intro": "Brassards, plastrons, doigtiers : des protections qui se choisissent à la taille et à la main. Elles se revendent peu cher, ce qui en fait un bon équipement de départ.",
+    "guide": {
+      "href": "/materiel-occasion.html",
+      "label": "Le matériel de tir à l’arc d’occasion"
+    }
+  },
+  "string": {
+    "titre": "Cordes d’arc d’occasion",
+    "intro": "Une corde doit correspondre exactement à la longueur de l’arc. C’est un consommable : vérifiez l’âge, l’état du tranche-fil et le nombre de brins, et préférez une corde peu tirée.",
+    "guide": {
+      "href": "/arc-classique-occasion.html",
+      "label": "Acheter un arc classique d’occasion"
+    }
+  },
+  "tools": {
+    "titre": "Outils et réglage d’archerie d’occasion",
+    "intro": "Presses, cordiers, équerres de réglage, outils de pose : du matériel d’atelier qui ne s’use presque pas et qu’on achète rarement neuf quand on peut le trouver d’occasion.",
+    "guide": {
+      "href": "/materiel-occasion.html",
+      "label": "Le matériel de tir à l’arc d’occasion"
+    }
+  },
+  "target": {
+    "titre": "Cibles et blasons d’occasion",
+    "intro": "Cibles mousse, buttes, cibles 3D : volumineuses et lourdes, elles voyagent mal — la remise en main propre est souvent la meilleure solution. Regardez l’usure au centre, qui dit combien de flèches la cible a déjà arrêtées.",
+    "guide": {
+      "href": "/expedier-un-arc.html",
+      "label": "Expédier du matériel encombrant"
+    }
+  },
+  "apparel": {
+    "titre": "Textile et bagagerie d’archerie d’occasion",
+    "intro": "Valises d’arc, sacs à dos, housses, tenues de club : la valise rigide est la pièce à surveiller, parce qu’elle protège un arc pendant le transport. Vérifiez les fermetures et la mousse intérieure.",
+    "guide": {
+      "href": "/expedier-un-arc.html",
+      "label": "Expédier un arc"
+    }
+  }
+}

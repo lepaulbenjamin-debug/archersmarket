@@ -1,7 +1,6 @@
-Archers Market est entièrement reconstruite. L'ancienne version affichait le site web dans une coque ; celle-ci est une vraie application Android.
+Nouveautés de la version 2.3.0
 
-• Paiement protégé : le vendeur n'est payé qu'à votre confirmation
-• Expédition : seuls les transporteurs qui acceptent un arc de 130 cm, étiquette et assurance comprises
-• Convoyage entre archers pour les colis hors gabarit
-• Dites ce que vous cherchez, les vendeurs volontaires sont prévenus
-• Filtres par puissance, main d'arc, allonge, marque
+• Modifiez vos annonces publiées : prix, description, photos, sans avoir à les republier
+• « Gérer mon annonce » ouvre directement votre annonce : réserver, marquer vendue, remettre en ligne ou supprimer
+• Vos annonces sont aussi sur le site archersmarket.fr, avec le même compte
+• Corrections et améliorations

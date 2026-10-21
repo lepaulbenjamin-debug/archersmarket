@@ -31,7 +31,7 @@ hébergées à Londres, au Royaume-Uni. Contact : contact@archersmarket.fr
 
 ## Le marché
 
-- [Les annonces](https://archersmarket.fr/) : le fil d'annonces en cours, filtrable par catégorie (par exemple https://archersmarket.fr/?category=limbs pour les branches). Chaque annonce a sa page, à l'adresse https://archersmarket.fr/listing/<identifiant>, avec son prix, son état et ses caractéristiques.
+- [Les annonces](https://archersmarket.fr/) : le fil d'annonces en cours. Chaque catégorie a sa page, à une adresse en français — par exemple https://archersmarket.fr/categorie/branches, https://archersmarket.fr/categorie/arc-classique ou https://archersmarket.fr/categorie/arc-a-poulies. Chaque annonce a sa page, à l'adresse https://archersmarket.fr/listing/<identifiant>, avec son prix, son état et ses caractéristiques.
 - [Ce que les archers cherchent](https://archersmarket.fr/wanted) : les demandes de matériel publiées par les membres.
 - [À propos](https://archersmarket.fr/a-propos.html) : ce qu'est Archers Market, ses frais, son fonctionnement.
 

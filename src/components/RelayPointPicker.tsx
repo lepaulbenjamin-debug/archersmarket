@@ -1,9 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Constants from 'expo-constants';
-import MapView, { Marker, type Region } from 'react-native-maps';
 
+import { RelayMap, type MapRegion } from '@/components/RelayMap';
 import { colors, radius, spacing } from '@/theme';
 import type { RelayPoint } from '@/services/shipping';
 
@@ -30,24 +29,6 @@ function horaireDuJour(jour: RelayPoint['hours'][number]): string | null {
  * montrer : les horaires. Un relais fermé le lundi n'est pas un détail quand
  * on choisit où retirer son arc.
  */
-/**
- * La carte est-elle utilisable sur cet appareil ?
- *
- * Sur Android, `react-native-maps` s'adosse à Google Maps, qui exige une clé
- * déclarée dans le manifeste. Sans elle, le composant ne se plaint pas : il
- * affiche un rectangle gris, ce qui est pire qu'une absence — l'utilisateur
- * croit à une panne et n'a aucune raison de faire défiler jusqu'à la liste,
- * qui est pourtant l'outil utile de cet écran.
- *
- * Sur iOS, Apple Maps ne demande rien : la carte s'affiche toujours.
- */
-const CARTE_DISPONIBLE =
-  Platform.OS !== 'android'
-  || Boolean(
-    (Constants.expoConfig?.android as { config?: { googleMaps?: { apiKey?: string } } } | undefined)
-      ?.config?.googleMaps?.apiKey,
-  );
-
 export function RelayPointPicker({
   points,
   selected,
@@ -66,7 +47,7 @@ export function RelayPointPicker({
 
   // Cadrage sur l'ensemble des points, avec une marge pour que les épingles
   // des bords ne collent pas au cadre.
-  const region = useMemo<Region | null>(() => {
+  const region = useMemo<MapRegion | null>(() => {
     if (situes.length === 0) return null;
     const lats = situes.map((p) => p.latitude as number);
     const lngs = situes.map((p) => p.longitude as number);
@@ -82,21 +63,8 @@ export function RelayPointPicker({
 
   return (
     <View style={styles.container}>
-      {region && CARTE_DISPONIBLE ? (
-        <View style={styles.carteCadre}>
-          <MapView style={styles.carte} initialRegion={region}>
-            {situes.map((point) => (
-              <Marker
-                key={point.code}
-                coordinate={{ latitude: point.latitude as number, longitude: point.longitude as number }}
-                title={point.name}
-                description={`${point.address}, ${point.city}`}
-                pinColor={selected?.code === point.code ? colors.primary : undefined}
-                onPress={() => onSelect(point)}
-              />
-            ))}
-          </MapView>
-        </View>
+      {region ? (
+        <RelayMap points={situes} region={region} selected={selected} onSelect={onSelect} />
       ) : null}
 
       <ScrollView style={styles.liste} nestedScrollEnabled>
@@ -161,14 +129,6 @@ export function RelayPointPicker({
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
   flex: { flex: 1 },
-  carteCadre: {
-    height: 220,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  carte: { flex: 1 },
   // Bornée, sinon la liste des relais chasse le bouton de paiement hors de
   // l'écran — on connaît déjà le prix d'un bouton qu'on ne voit pas.
   liste: { maxHeight: Platform.OS === 'ios' ? 300 : 280 },

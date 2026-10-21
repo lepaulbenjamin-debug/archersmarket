@@ -1,9 +1,9 @@
-import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import {
   hasRegisteredDevice,
+  onNotificationOpened,
   registerForPush,
   unregisterPush,
   unavailableMessage,
@@ -43,13 +43,7 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
   // sur recherche déposerait le membre sur l'accueil, à lui de retrouver
   // l'annonce — autant ne pas l'avoir prévenu.
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as {
-        type?: string;
-        conversationId?: string;
-        profileId?: string;
-        listingId?: string;
-      };
+    return onNotificationOpened((data) => {
       if (data?.type === 'message' && data.conversationId) {
         router.push(`/chat/${data.conversationId}`);
       } else if (data?.type === 'review' && data.profileId) {
@@ -58,7 +52,6 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
         router.push(`/listing/${data.listingId}`);
       }
     });
-    return () => subscription.remove();
   }, [router]);
 
   const toggle = useCallback(

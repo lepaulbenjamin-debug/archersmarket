@@ -6,17 +6,10 @@ import { Platform } from 'react-native';
 import { supabase } from '@/services/supabase';
 
 /** Motif d'indisponibilité, à afficher tel quel à l'utilisateur. */
-export type PushUnavailable =
-  | 'simulator'
-  | 'denied'
-  | 'expo-go'
-  | 'no-project-id'
-  | 'error';
+import type { NotificationTarget, PushRegistration } from '@/services/pushShared';
 
-export interface PushRegistration {
-  token?: string;
-  reason?: PushUnavailable;
-}
+export { unavailableMessage } from '@/services/pushShared';
+export type { NotificationTarget, PushRegistration, PushUnavailable } from '@/services/pushShared';
 
 // Notification reçue application ouverte : bandeau + son, sans badge.
 Notifications.setNotificationHandler({
@@ -87,12 +80,14 @@ export async function hasRegisteredDevice(userId: string): Promise<boolean> {
   return (data ?? []).length > 0;
 }
 
-export const unavailableMessage: Record<PushUnavailable, string> = {
-  simulator: 'Les notifications ne fonctionnent que sur un téléphone, pas sur un simulateur.',
-  denied:
-    'Notifications refusées. Autorisez-les dans les réglages de votre téléphone pour être prévenu des messages.',
-  'expo-go': 'Les notifications nécessitent l’application installée, pas Expo Go.',
-  'no-project-id':
-    'Configuration incomplète : cette version de l’application n’est pas reliée à un projet EAS.',
-  error: 'Impossible d’activer les notifications pour l’instant.',
-};
+/**
+ * Toucher une notification ouvre ce qu'elle annonce. L'écouteur vit ici plutôt
+ * que dans le contexte, pour que celui-ci reste commun au web — qui n'a pas de
+ * notifications, donc rien à écouter.
+ */
+export function onNotificationOpened(handler: (target: NotificationTarget) => void): () => void {
+  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    handler(response.notification.request.content.data as NotificationTarget);
+  });
+  return () => subscription.remove();
+}

@@ -1,12 +1,12 @@
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Onboarding } from '@/components/Onboarding';
+import { PaymentProvider } from '@/components/PaymentProvider';
 import { WhatsNew } from '@/components/WhatsNew';
 import { NOUVEAUTES } from '@/data/whatsNew';
 import {
@@ -28,6 +28,15 @@ function RootNavigator() {
   const [nouveautes, setNouveautes] = useState(false);
 
   useEffect(() => {
+    // Sur le site, ni accueil plein écran ni nouveautés. Quelqu'un qui arrive
+    // de Google sur une annonce vient voir cette annonce : la recouvrir d'une
+    // présentation en trois écrans, c'est le faire repartir. Et les
+    // « nouveautés » parlent des mises à jour de l'application, qu'un
+    // visiteur du site n'a jamais installée.
+    if (Platform.OS === 'web') {
+      setAccueilVu(true);
+      return;
+    }
     Promise.all([hasSeenOnboarding(), lastSeenNews()]).then(([vu, dernier]) => {
       setAccueilVu(vu);
       // Les nouveautés ne s'annoncent qu'à qui connaissait déjà l'application.
@@ -116,10 +125,10 @@ export default function RootLayout() {
           <ListingsProvider>
             <MessagesProvider>
               <PushProvider>
-                <StripeProvider publishableKey={process.env.EXPO_PUBLIC_STRIPE_KEY ?? ''}>
+                <PaymentProvider>
                   <StatusBar style="dark" />
                   <RootNavigator />
-                </StripeProvider>
+                </PaymentProvider>
               </PushProvider>
             </MessagesProvider>
           </ListingsProvider>

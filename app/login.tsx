@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -22,7 +22,7 @@ import { useAuth } from '@/store/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, refreshUser } = useAuth();
+  const { signIn, refreshUser, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +57,23 @@ export default function LoginScreen() {
     }
     router.canGoBack() ? router.back() : router.replace('/');
   };
+
+  /**
+   * Le retour de Google, sur le site.
+   *
+   * La connexion y passe par une redirection complète : la page part chez
+   * Google et revient ici, session ouverte. Personne n'est là pour appeler
+   * `afterSocial` — on le fait en voyant la session, une seule fois.
+   */
+  const repris = useRef(false);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !user || repris.current) return;
+    repris.current = true;
+    afterSocial();
+    // `afterSocial` ne dépend que de valeurs stables ; la relancer à chaque
+    // rendu enverrait l'archer deux fois au même endroit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   return (
     <Screen>

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { toUser, type ProfileRow } from '@/services/mappers';
 import { deleteAllPhotosOf } from '@/services/photos';
 import { fail, supabase } from '@/services/supabase';
@@ -77,6 +79,10 @@ export async function signUp(input: SignUpInput): Promise<SignUpResult> {
     email,
     password: input.password,
     options: {
+      // Inscrit depuis le site, le lien de confirmation doit ramener au site :
+      // l'adresse par défaut du projet ouvre l'application, que la personne
+      // n'a peut-être pas. Sur téléphone, on garde cette adresse par défaut.
+      ...(Platform.OS === 'web' ? { emailRedirectTo: window.location.origin } : {}),
       // Reprises par le trigger handle_new_user pour créer le profil.
       data: {
         name: input.name.trim(),

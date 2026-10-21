@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 
+import { analysisPhoto } from '@/services/photoFiles';
 import { edgeBody, supabase } from '@/services/supabase';
 import type { Cents } from '@/services/payments';
 import type { CategoryId, ConditionId } from '@/types';
@@ -74,10 +75,10 @@ export async function draftFromPhoto(): Promise<PhotoDraft | null> {
   if (choix.canceled || !choix.assets?.length) return null;
 
   const asset = choix.assets[0];
-  if (!asset.base64) throw new Error('Photo illisible.');
+  const photo = await analysisPhoto(asset);
 
   const { data, error } = await supabase.functions.invoke('listing-from-photo', {
-    body: { photo: asset.base64, mimeType: asset.mimeType ?? 'image/jpeg' },
+    body: { photo: photo.base64, mimeType: photo.mimeType },
   });
   if (error) {
     // Une photo qui ne montre pas de matériel n'est pas un échec technique :

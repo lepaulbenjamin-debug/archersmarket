@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -32,8 +33,10 @@ export const supabase = createClient(url, key, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    // Pas de redirection OAuth par URL sur mobile.
-    detectSessionInUrl: false,
+    // Sur téléphone, les retours de connexion arrivent par lien profond et
+    // sont traités à la main (AuthContext, oauth.ts). Sur le site, ils
+    // arrivent dans l'adresse de la page : le client les y lit lui-même.
+    detectSessionInUrl: Platform.OS === 'web',
   },
   global: { fetch: fetchWithTimeout },
 });

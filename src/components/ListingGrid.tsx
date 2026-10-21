@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { FlatList, Platform, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { ListingCard } from '@/components/ListingCard';
+import { SiteFooter } from '@/components/SiteFooter';
 import { spacing } from '@/theme';
 import { SITE_LARGE, useContentWidth } from '@/utils/site';
 import type { Listing } from '@/types';
@@ -55,6 +56,7 @@ export function ListingGrid({
       <View style={styles.emptyWrap}>
         {header}
         {empty}
+        <SiteFooter />
       </View>
     );
   }
@@ -72,6 +74,8 @@ export function ListingGrid({
       contentContainerStyle={[styles.content, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={header}
+      // Sur le site seulement : mentions légales, conditions, guides.
+      ListFooterComponent={<SiteFooter />}
       renderItem={({ item }) =>
         item ? (
           <ListingCard

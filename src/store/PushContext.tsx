@@ -48,7 +48,8 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
         router.push(`/chat/${data.conversationId}`);
       } else if (data?.type === 'review' && data.profileId) {
         router.push(`/seller/${data.profileId}`);
-      } else if (data?.type === 'saved_search' && data.listingId) {
+      } else if ((data?.type === 'saved_search' || data?.type === 'followed_seller') && data.listingId) {
+        // Une alerte de recherche, ou la nouvelle annonce d'un vendeur suivi.
         router.push(`/listing/${data.listingId}`);
       }
     });

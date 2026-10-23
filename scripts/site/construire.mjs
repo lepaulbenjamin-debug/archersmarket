@@ -163,6 +163,8 @@ async function lireAnnonces() {
     'id', 'title', 'description', 'price', 'category', 'brand', 'condition', 'hand', 'city',
     'status', 'created_at', 'updated_at', 'draw_weight', 'bow_length', 'draw_length', 'spine',
     'size', 'shipping', 'listing_images(path,position)',
+    // Pour les pages de vendeur seulement, marquées noindex (voir plus bas).
+    'seller_id', 'seller:profiles!listings_seller_id_fkey(name,city)',
   ].join(',');
   const annonces = [];
   // Les réservées restent visibles : elles peuvent encore se libérer. Les
@@ -546,6 +548,39 @@ ${categoriesPeuplees.length > (n ? 1 : 0) ? `<h2>Les autres catégories</h2><ul>
   );
 }
 
+// --- Une page par vendeur, pour l'aperçu des liens partagés --------------------
+
+// Quand on partage la boutique d'un vendeur, c'est cette page que lisent
+// WhatsApp, Messages ou Facebook pour composer l'aperçu : « Les annonces de
+// Camille », avec une photo. Sans elle, le lien s'afficherait nu.
+//
+// Elle porte le nom du vendeur — un aperçu sans nom ne dirait rien. C'est
+// pourquoi elle est en `noindex` et hors du sitemap : l'engagement pris pour
+// les fiches tient, le nom d'un membre ne devient pas cherchable sur Google.
+
+const parVendeur = {};
+for (const a of annonces) (parVendeur[a.seller_id] ??= []).push(a);
+
+for (const [vendeurId, liste] of Object.entries(parVendeur)) {
+  const nom = liste[0].seller?.name ?? 'Un archer';
+  const ville = liste[0].seller?.city;
+  const n = liste.length;
+  const lignes = liste
+    .map((a) => `<li style="margin:0 0 10px"><a href="/listing/${a.id}" style="color:#1B1B1D">${html(a.title)}</a> — <strong>${html(prix(a.price))}</strong></li>`)
+    .join('');
+  ecrire(
+    `seller/${vendeurId}.html`,
+    page({
+      titre: `Les annonces de ${nom} — Archers Market`,
+      description: `${pluriel(n, 'annonce')} de matériel de tir à l’arc d’occasion${ville ? ` à ${ville}` : ''}, sur Archers Market, le marché d’occasion entre archers.`,
+      robots: 'noindex, follow',
+      image: liste.find((a) => a.photos.length)?.photos[0],
+      type: 'profile',
+      contenu: `${enteteSite}<main style="max-width:760px;margin:0 auto;padding:24px 20px"><h1>Les annonces de ${html(nom)}</h1><p>${html(pluriel(n, 'annonce'))} en ligne${ville ? ` · ${html(ville)}` : ''}.</p><ul style="padding-left:20px">${lignes}</ul></main>`,
+    }),
+  );
+}
+
 // --- Les écrans de l'application qui ont une adresse fixe ---------------------
 
 // Servis avec un vrai 200 plutôt que par le repli 404.html. Les recherches
@@ -676,5 +711,5 @@ const aSignaler = entrees
 fs.writeFileSync(`${sortie}.a-signaler.json`, JSON.stringify(aSignaler, null, 2));
 
 console.log(
-  `site assemblé dans ${sortie} : ${annonces.length} annonce(s), ${categoriesPeuplees.length}/${Object.keys(CATEGORIES).length} catégorie(s) indexable(s), ${entrees.length} URL au sitemap, ${aSignaler.length} à signaler aux moteurs`,
+  `site assemblé dans ${sortie} : ${annonces.length} annonce(s), ${Object.keys(parVendeur).length} page(s) de vendeur, ${categoriesPeuplees.length}/${Object.keys(CATEGORIES).length} catégorie(s) indexable(s), ${entrees.length} URL au sitemap, ${aSignaler.length} à signaler aux moteurs`,
 );

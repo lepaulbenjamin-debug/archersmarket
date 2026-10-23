@@ -18,6 +18,11 @@ import { AuthProvider, useAuth } from '@/store/AuthContext';
 import { ListingsProvider } from '@/store/ListingsContext';
 import { MessagesProvider } from '@/store/MessagesContext';
 import { PushProvider } from '@/store/PushContext';
+import { installerDialoguesWeb } from '@/utils/dialogues';
+
+// Sur le site, les boîtes de dialogue de React Native ne font rien : on les
+// branche sur celles du navigateur avant le premier écran. Sans effet ailleurs.
+installerDialoguesWeb();
 
 function RootNavigator() {
   const { loading } = useAuth();

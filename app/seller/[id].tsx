@@ -1,9 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { ListingGrid } from '@/components/ListingGrid';
 import { Rating } from '@/components/Rating';
@@ -14,7 +15,10 @@ import { Header, Screen } from '@/components/Screen';
 import { colors, radius, spacing } from '@/theme';
 import { useAuth } from '@/store/AuthContext';
 import { useListings } from '@/store/ListingsContext';
+import { fetchFollowState, follow, unfollow, type FollowState } from '@/services/follows';
 import { fetchReviews } from '@/services/reviews';
+import { usePush } from '@/store/PushContext';
+import { partagerVendeur } from '@/utils/partage';
 import { formatMemberSince } from '@/utils/format';
 import type { Review } from '@/types';
 
@@ -25,11 +29,57 @@ export default function SellerScreen() {
   const { listingsBySeller, isFavorite, toggleFavorite } = useListings();
 
   const [reviews, setReviews] = useState<Review[]>([]);
+  const { enabled: notificationsActives } = usePush();
+  // `null` : abonnements indisponibles — le bouton ne s'affiche pas.
+  const [abonnement, setAbonnement] = useState<FollowState | null>(null);
+  const [basculeEnCours, setBasculeEnCours] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     fetchReviews(id).then(setReviews).catch(() => setReviews([]));
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    let vivant = true;
+    fetchFollowState(id, currentUser?.id)
+      .then((etat) => vivant && setAbonnement(etat))
+      .catch(() => vivant && setAbonnement(null));
+    return () => {
+      vivant = false;
+    };
+  }, [id, currentUser?.id]);
+
+  const basculerAbonnement = async () => {
+    if (!id || !abonnement) return;
+    if (!currentUser) {
+      router.push('/login');
+      return;
+    }
+    const suivre = !abonnement.following;
+    setBasculeEnCours(true);
+    try {
+      await (suivre ? follow(currentUser.id, id) : unfollow(currentUser.id, id));
+      setAbonnement({
+        following: suivre,
+        followers: Math.max(0, abonnement.followers + (suivre ? 1 : -1)),
+      });
+      // Suivre sans notifications, c'est croire qu'on sera prévenu alors que
+      // rien n'arrivera. On le dit tout de suite, une fois.
+      if (suivre && !notificationsActives) {
+        Alert.alert(
+          `Vous suivez ${seller?.name ?? 'ce vendeur'}`,
+          Platform.OS === 'web'
+            ? 'Ses nouvelles annonces sont signalées par notification, sur l’application : installez-la sur votre téléphone pour être prévenu.'
+            : 'Pour être prévenu de ses nouvelles annonces, activez les notifications dans Compte → Mes alertes.',
+        );
+      }
+    } catch (erreur) {
+      Alert.alert('Abonnement impossible', (erreur as Error).message);
+    } finally {
+      setBasculeEnCours(false);
+    }
+  };
 
   const seller = id ? userById(id) : undefined;
   const listings = useMemo(
@@ -72,6 +122,30 @@ export default function SellerScreen() {
                 <Rating value={seller.rating} count={seller.reviewCount} />
               {seller.acceptsPayments ? <VerifiedBadge /> : null}
               </View>
+            </View>
+            <View style={styles.actions}>
+              {abonnement && currentUser?.id !== seller.id ? (
+                <Button
+                  label={abonnement.following ? 'Abonné' : 'Suivre'}
+                  icon={abonnement.following ? 'check' : 'plus'}
+                  variant={abonnement.following ? 'secondary' : 'primary'}
+                  size="sm"
+                  loading={basculeEnCours}
+                  onPress={basculerAbonnement}
+                />
+              ) : null}
+              <Button
+                label={currentUser?.id === seller.id ? 'Partager mes annonces' : 'Partager ses annonces'}
+                icon="share-variant-outline"
+                variant="secondary"
+                size="sm"
+                onPress={() => partagerVendeur(seller, listings.length)}
+              />
+              {abonnement ? (
+                <Text style={styles.abonnes}>
+                  {abonnement.followers} abonné{abonnement.followers > 1 ? 's' : ''}
+                </Text>
+              ) : null}
             </View>
             {seller.bio ? <Text style={styles.bio}>{seller.bio}</Text> : null}
             <View style={styles.metaRow}>
@@ -136,6 +210,8 @@ const styles = StyleSheet.create({
   name: { fontSize: 18, fontWeight: '800', color: colors.text },
   handle: { fontSize: 13, color: colors.textFaint, marginBottom: 2 },
   bio: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
+  abonnes: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaLabel: { fontSize: 12.5, color: colors.textMuted },

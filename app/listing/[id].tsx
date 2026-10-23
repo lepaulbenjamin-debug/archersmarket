@@ -6,7 +6,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
@@ -32,6 +31,7 @@ import { useListings } from '@/store/ListingsContext';
 import { useMessages } from '@/store/MessagesContext';
 import { discountPercent, formatPrice, formatRelativeDate } from '@/utils/format';
 import { imageSource } from '@/utils/images';
+import { partagerAnnonce } from '@/utils/partage';
 import { SITE_PAGE, useContentWidth } from '@/utils/site';
 
 
@@ -154,10 +154,8 @@ export default function ListingScreen() {
     toggleFavorite(listing.id);
   };
 
-  const shareListing = () =>
-    Share.share({
-      message: `${listing.title} — ${formatPrice(listing.price)} sur Archers Market`,
-    }).catch(() => undefined);
+  // Avec son lien sur le site : un texte seul ne menait nulle part.
+  const shareListing = () => partagerAnnonce(listing);
 
   return (
     <View style={styles.root}>

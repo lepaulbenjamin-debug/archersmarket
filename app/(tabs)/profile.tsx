@@ -32,6 +32,7 @@ import { usePush } from '@/store/PushContext';
 import { formatMemberSince, formatPrice } from '@/utils/format';
 import { imageSource } from '@/utils/images';
 import type { ListingStatus, PendingReview, Review } from '@/types';
+import { partagerVendeur } from '@/utils/partage';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -299,6 +300,38 @@ export default function ProfileScreen() {
               <Text style={styles.settingLabel}>Mes alertes</Text>
               <Text style={styles.settingHint}>
                 Être prévenu dès qu’une annonce correspond à vos recherches.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/account/following')}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="account-heart-outline" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Vendeurs suivis</Text>
+              <Text style={styles.settingHint}>
+                Être prévenu dès qu’un vendeur que vous suivez publie une annonce.
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />
+          </Pressable>
+
+          {/* Le lien de sa propre boutique : toutes ses annonces, à envoyer à un
+              club, à poster dans un groupe, à mettre en signature. */}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => partagerVendeur(user, myListings.filter((l) => l.status !== 'sold').length)}
+            style={({ pressed }) => [styles.settingRow, styles.settingDivider, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="share-variant-outline" size={19} color={colors.text} />
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Partager mes annonces</Text>
+              <Text style={styles.settingHint}>
+                Un lien vers toutes vos annonces, qui s’ouvre même sans l’application.
               </Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textFaint} />

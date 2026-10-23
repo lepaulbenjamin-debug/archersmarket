@@ -78,8 +78,9 @@ export default function ChatScreen() {
   const makeOffer = () => {
     if (!listing) return;
 
-    // Alert.prompt (saisie libre) n'existe que sur iOS ; ailleurs on propose -10 %.
-    if (Platform.OS === 'ios' && Alert.prompt) {
+    // Alert.prompt (saisie libre) n'existe que sur iOS — et sur le site, où il
+    // passe par la boîte de saisie du navigateur. Sur Android, on propose -10 %.
+    if ((Platform.OS === 'ios' || Platform.OS === 'web') && Alert.prompt) {
       Alert.prompt(
         'Proposer un prix',
         `Prix demandé : ${formatPrice(listing.price)}`,
